@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\HotelController;
+use App\Http\Controllers\Api\RoomController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -26,6 +27,10 @@ Route::prefix('auth')->group(function () {
 Route::get('/hotels', [HotelController::class, 'index']);
 Route::get('/hotels/{id}', [HotelController::class, 'show']);
 
+// Public room routes
+Route::get('/rooms', [RoomController::class, 'index']);
+Route::get('/rooms/{id}', [RoomController::class, 'show']);
+
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
@@ -35,5 +40,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/hotels', [HotelController::class, 'store']);
     Route::put('/hotels/{id}', [HotelController::class, 'update']);
     Route::delete('/hotels/{id}', [HotelController::class, 'destroy']);
+    
+    // Protected room routes (admin only)
+    Route::post('/rooms', [RoomController::class, 'store']);
+    Route::put('/rooms/{id}', [RoomController::class, 'update']);
+    Route::delete('/rooms/{id}', [RoomController::class, 'destroy']);
 });
 

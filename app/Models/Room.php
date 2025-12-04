@@ -1,0 +1,98 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Room extends Model
+{
+    /** @use HasFactory<\Database\Factories\RoomFactory> */
+    use HasFactory;
+
+    protected $fillable = [
+        'hotel_id',
+        'name',
+        'description',
+        'type',
+        'size',
+        'max_guests',
+        'single_beds',
+        'double_beds',
+        'king_beds',
+        'queen_beds',
+        'price_per_night',
+        'original_price',
+        'discount_percentage',
+        'is_available',
+        'has_breakfast',
+        'has_wifi',
+        'has_ac',
+        'has_tv',
+        'has_minibar',
+        'has_safe',
+        'has_balcony',
+        'has_bathtub',
+        'has_shower',
+        'no_smoking',
+        'view',
+        'images',
+        'rating',
+        'reviews_count',
+        'is_active',
+        'is_featured',
+    ];
+
+    protected $casts = [
+        'size' => 'integer',
+        'max_guests' => 'integer',
+        'single_beds' => 'integer',
+        'double_beds' => 'integer',
+        'king_beds' => 'integer',
+        'queen_beds' => 'integer',
+        'price_per_night' => 'decimal:2',
+        'original_price' => 'decimal:2',
+        'discount_percentage' => 'integer',
+        'is_available' => 'boolean',
+        'has_breakfast' => 'boolean',
+        'has_wifi' => 'boolean',
+        'has_ac' => 'boolean',
+        'has_tv' => 'boolean',
+        'has_minibar' => 'boolean',
+        'has_safe' => 'boolean',
+        'has_balcony' => 'boolean',
+        'has_bathtub' => 'boolean',
+        'has_shower' => 'boolean',
+        'no_smoking' => 'boolean',
+        'rating' => 'decimal:1',
+        'reviews_count' => 'integer',
+        'is_active' => 'boolean',
+        'is_featured' => 'boolean',
+        'images' => 'array',
+    ];
+
+    /**
+     * Get the hotel that owns the room.
+     */
+    public function hotel(): BelongsTo
+    {
+        return $this->belongsTo(Hotel::class);
+    }
+
+    /**
+     * Get total number of beds in the room.
+     */
+    public function getTotalBedsAttribute(): int
+    {
+        return $this->single_beds + $this->double_beds + $this->king_beds + $this->queen_beds;
+    }
+
+    /**
+     * Check if room has discount.
+     */
+    public function getHasDiscountAttribute(): bool
+    {
+        return $this->original_price && $this->original_price > $this->price_per_night;
+    }
+}

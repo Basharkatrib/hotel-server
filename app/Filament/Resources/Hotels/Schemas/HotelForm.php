@@ -3,12 +3,12 @@
 namespace App\Filament\Resources\Hotels\Schemas;
 
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
 class HotelForm
@@ -219,13 +219,15 @@ class HotelForm
                             ->multiple()
                             ->reorderable()
                             ->maxFiles(10)
+                            ->disk('public')
+                            ->directory('hotels')
+                            ->visibility('public')
                             ->imageEditor()
                             ->imageEditorAspectRatios([
                                 '16:9',
                                 '4:3',
                                 '1:1',
                             ])
-                            ->directory('hotels')
                             ->visibility('public')
                             ->columnSpanFull()
                             ->helperText('Upload up to 10 images. Drag to reorder.'),
