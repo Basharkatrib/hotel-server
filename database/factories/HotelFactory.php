@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Hotel>
@@ -55,8 +56,11 @@ class HotelFactory extends Factory
             $images[] = 'https://picsum.photos/seed/' . fake()->unique()->numberBetween(1000, 9999) . '/800/600';
         }
 
+        $name = 'Hotel ' . fake()->company();
+
         return [
-            'name' => 'Hotel ' . fake()->company(),
+            'name' => $name,
+            'slug' => Str::slug($name) . '-' . fake()->unique()->numberBetween(1000, 9999),
             'description' => fake()->paragraphs(3, true),
             'address' => fake()->streetAddress(),
             'city' => $city,

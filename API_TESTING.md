@@ -476,3 +476,4 @@ curl "http://hotel-server.test/api/hotels?is_featured=1&has_breakfast_included=1
 ```
 
 
+

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Hotel extends Model
 {
@@ -20,6 +21,7 @@ class Hotel extends Model
 
     protected $fillable = [
         'name',
+        'slug',
         'description',
         'address',
         'city',
@@ -69,4 +71,37 @@ class Hotel extends Model
         'images' => 'array',
         'amenities' => 'array',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Hotel $hotel) {
+            if (empty($hotel->slug)) {
+                $hotel->slug = static::generateUniqueSlug($hotel->name);
+            }
+        });
+
+        static::updating(function (Hotel $hotel) {
+            if ($hotel->isDirty('name')) {
+                $hotel->slug = static::generateUniqueSlug($hotel->name, $hotel->id);
+            }
+        });
+    }
+
+    protected static function generateUniqueSlug(string $name, ?int $ignoreId = null): string
+    {
+        $base = Str::slug($name);
+        $slug = $base;
+        $counter = 1;
+
+        while (static::query()
+            ->where('slug', $slug)
+            ->when($ignoreId, fn ($q) => $q->where('id', '!=', $ignoreId))
+            ->exists()
+        ) {
+            $slug = $base . '-' . $counter;
+            $counter++;
+        }
+
+        return $slug;
+    }
 }

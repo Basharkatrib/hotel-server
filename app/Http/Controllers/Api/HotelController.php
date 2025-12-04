@@ -129,11 +129,11 @@ class HotelController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Display the specified resource by slug.
      */
-    public function show(int $id): JsonResponse
+    public function show(string $slug): JsonResponse
     {
-        $hotel = Hotel::find($id);
+        $hotel = Hotel::where('slug', $slug)->first();
 
         if (!$hotel) {
             return $this->error(['Hotel not found.'], 404);
