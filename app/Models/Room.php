@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Carbon\Carbon;
 
 class Room extends Model
 {
@@ -94,5 +96,40 @@ class Room extends Model
     public function getHasDiscountAttribute(): bool
     {
         return $this->original_price && $this->original_price > $this->price_per_night;
+    }
+
+    /**
+     * Get the bookings for the room.
+     */
+    public function bookings(): HasMany
+    {
+        return $this->hasMany(Booking::class);
+    }
+
+    /**
+     * Check if room is available for given dates.
+     */
+    public function isAvailableForDates($checkIn, $checkOut): bool
+    {
+        $checkIn = Carbon::parse($checkIn);
+        $checkOut = Carbon::parse($checkOut);
+
+        // Check if room is generally available
+        if (!$this->is_available || !$this->is_active) {
+            return false;
+        }
+
+        // Check for overlapping bookings
+        $overlappingBookings = $this->bookings()
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->where(function ($query) use ($checkIn, $checkOut) {
+                $query->where(function ($q) use ($checkIn, $checkOut) {
+                    $q->where('check_in_date', '<', $checkOut)
+                      ->where('check_out_date', '>', $checkIn);
+                });
+            })
+            ->exists();
+
+        return !$overlappingBookings;
     }
 }

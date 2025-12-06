@@ -55,4 +55,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(Otp::class);
     }
+
+    /**
+     * Get the bookings for the user
+     */
+    public function bookings(): HasMany
+    {
+        return $this->hasMany(Booking::class);
+    }
 }

@@ -25,6 +25,10 @@ class RoomController extends Controller
             $query->where('hotel_id', $request->hotel_id);
         }
 
+        // Store check-in and check-out dates for later use
+        $checkIn = $request->check_in_date ?? null;
+        $checkOut = $request->check_out_date ?? null;
+
         // Filter by type
         if ($request->has('type')) {
             $query->where('type', $request->type);
@@ -112,8 +116,48 @@ class RoomController extends Controller
         $perPage = $request->get('per_page', 15);
         $rooms = $query->paginate($perPage);
 
+        // Add availability information for each room if dates are provided
+        $roomsWithAvailability = collect($rooms->items())->map(function ($room) use ($checkIn, $checkOut) {
+            $roomArray = $room->toArray();
+            
+            // Check if room is available for the selected dates
+            if ($checkIn && $checkOut) {
+                $hasConflict = $room->bookings()
+                    ->whereIn('status', ['pending', 'confirmed'])
+                    ->where(function ($query) use ($checkIn, $checkOut) {
+                        $query->where('check_in_date', '<', $checkOut)
+                              ->where('check_out_date', '>', $checkIn);
+                    })
+                    ->exists();
+                
+                $roomArray['is_available_for_dates'] = !$hasConflict;
+                
+                // If there's a conflict, get the booking details
+                if ($hasConflict) {
+                    $conflictingBooking = $room->bookings()
+                        ->whereIn('status', ['pending', 'confirmed'])
+                        ->where(function ($query) use ($checkIn, $checkOut) {
+                            $query->where('check_in_date', '<', $checkOut)
+                                  ->where('check_out_date', '>', $checkIn);
+                        })
+                        ->first();
+                    
+                    if ($conflictingBooking) {
+                        $roomArray['booked_dates'] = [
+                            'check_in' => $conflictingBooking->check_in_date,
+                            'check_out' => $conflictingBooking->check_out_date,
+                        ];
+                    }
+                }
+            } else {
+                $roomArray['is_available_for_dates'] = $room->is_available;
+            }
+            
+            return $roomArray;
+        });
+
         return $this->success([
-            'rooms' => $rooms->items(),
+            'rooms' => $roomsWithAvailability->toArray(),
             'pagination' => [
                 'current_page' => $rooms->currentPage(),
                 'last_page' => $rooms->lastPage(),
