@@ -30,16 +30,16 @@ class RoomController extends Controller
         $checkOut = $request->check_out_date ?? null;
 
         // Filter by type
-        if ($request->has('type')) {
+        if ($request->has('type') && $request->type !== '' && $request->type !== null) {
             $query->where('type', $request->type);
         }
 
         // Filter by price range
-        if ($request->has('min_price')) {
+        if ($request->has('min_price') && $request->min_price !== '' && $request->min_price !== null) {
             $query->where('price_per_night', '>=', $request->min_price);
         }
 
-        if ($request->has('max_price')) {
+        if ($request->has('max_price') && $request->max_price !== '' && $request->max_price !== null) {
             $query->where('price_per_night', '<=', $request->max_price);
         }
 
@@ -68,29 +68,29 @@ class RoomController extends Controller
         }
 
         // Filter by max guests
-        if ($request->has('max_guests')) {
+        if ($request->has('max_guests') && $request->max_guests !== '' && $request->max_guests !== null) {
             $query->where('max_guests', '>=', $request->max_guests);
         }
 
         // Filter by features
-        if ($request->has('has_breakfast') && $request->has_breakfast) {
+        if ($request->has('has_breakfast') && ($request->has_breakfast === true || $request->has_breakfast === 'true' || $request->has_breakfast === '1')) {
             $query->where('has_breakfast', true);
         }
 
-        if ($request->has('has_wifi') && $request->has_wifi) {
+        if ($request->has('has_wifi') && ($request->has_wifi === true || $request->has_wifi === 'true' || $request->has_wifi === '1')) {
             $query->where('has_wifi', true);
         }
 
-        if ($request->has('has_ac') && $request->has_ac) {
+        if ($request->has('has_ac') && ($request->has_ac === true || $request->has_ac === 'true' || $request->has_ac === '1')) {
             $query->where('has_ac', true);
         }
 
-        if ($request->has('has_balcony') && $request->has_balcony) {
+        if ($request->has('has_balcony') && ($request->has_balcony === true || $request->has_balcony === 'true' || $request->has_balcony === '1')) {
             $query->where('has_balcony', true);
         }
 
         // Filter by view
-        if ($request->has('view')) {
+        if ($request->has('view') && $request->view !== '' && $request->view !== null) {
             $query->where('view', $request->view);
         }
 
@@ -108,8 +108,17 @@ class RoomController extends Controller
         $sortBy = $request->get('sort_by', 'created_at');
         $sortOrder = $request->get('sort_order', 'desc');
         
+        // Validate sort order
+        if (!in_array($sortOrder, ['asc', 'desc'])) {
+            $sortOrder = 'desc';
+        }
+        
+        // Validate and apply sorting
         if (in_array($sortBy, ['price_per_night', 'rating', 'created_at', 'max_guests'])) {
             $query->orderBy($sortBy, $sortOrder);
+        } else {
+            // Default sorting if invalid sort_by
+            $query->orderBy('created_at', 'desc');
         }
 
         // Pagination
@@ -122,32 +131,37 @@ class RoomController extends Controller
             
             // Check if room is available for the selected dates
             if ($checkIn && $checkOut) {
-                $hasConflict = $room->bookings()
-                    ->whereIn('status', ['pending', 'confirmed'])
-                    ->where(function ($query) use ($checkIn, $checkOut) {
-                        $query->where('check_in_date', '<', $checkOut)
-                              ->where('check_out_date', '>', $checkIn);
-                    })
-                    ->exists();
-                
-                $roomArray['is_available_for_dates'] = !$hasConflict;
-                
-                // If there's a conflict, get the booking details
-                if ($hasConflict) {
-                    $conflictingBooking = $room->bookings()
+                try {
+                    $hasConflict = $room->bookings()
                         ->whereIn('status', ['pending', 'confirmed'])
                         ->where(function ($query) use ($checkIn, $checkOut) {
                             $query->where('check_in_date', '<', $checkOut)
                                   ->where('check_out_date', '>', $checkIn);
                         })
-                        ->first();
+                        ->exists();
                     
-                    if ($conflictingBooking) {
-                        $roomArray['booked_dates'] = [
-                            'check_in' => $conflictingBooking->check_in_date,
-                            'check_out' => $conflictingBooking->check_out_date,
-                        ];
+                    $roomArray['is_available_for_dates'] = !$hasConflict;
+                    
+                    // If there's a conflict, get the booking details
+                    if ($hasConflict) {
+                        $conflictingBooking = $room->bookings()
+                            ->whereIn('status', ['pending', 'confirmed'])
+                            ->where(function ($query) use ($checkIn, $checkOut) {
+                                $query->where('check_in_date', '<', $checkOut)
+                                      ->where('check_out_date', '>', $checkIn);
+                            })
+                            ->first(['check_in_date', 'check_out_date']);
+                        
+                        if ($conflictingBooking) {
+                            $roomArray['booked_dates'] = [
+                                'check_in' => $conflictingBooking->check_in_date,
+                                'check_out' => $conflictingBooking->check_out_date,
+                            ];
+                        }
                     }
+                } catch (\Exception $e) {
+                    // If there's an error checking availability, default to room's general availability
+                    $roomArray['is_available_for_dates'] = $room->is_available;
                 }
             } else {
                 $roomArray['is_available_for_dates'] = $room->is_available;

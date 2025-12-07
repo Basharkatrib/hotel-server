@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BookingController;
+use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\HotelController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\RoomController;
@@ -63,5 +64,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Protected payment routes
     Route::post('/payments/create-intent', [PaymentController::class, 'createIntent']);
     Route::post('/payments/confirm', [PaymentController::class, 'confirm']);
+    
+    // Protected favorites routes
+    Route::get('/favorites', [FavoriteController::class, 'index']);
+    Route::post('/favorites', [FavoriteController::class, 'store']);
+    Route::delete('/favorites/{id}', [FavoriteController::class, 'destroy']);
+    Route::post('/favorites/remove', [FavoriteController::class, 'remove']);
+    Route::get('/favorites/check', [FavoriteController::class, 'check']);
 });
 

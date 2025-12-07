@@ -24,6 +24,7 @@ class BookingController extends Controller
             'room_id' => ['required', 'exists:rooms,id'],
             'check_in_date' => ['required', 'date', 'after_or_equal:today'],
             'check_out_date' => ['required', 'date', 'after:check_in_date'],
+            'guests_count' => ['nullable', 'integer', 'min:1'],
         ]);
 
         if ($validator->fails()) {
@@ -31,6 +32,14 @@ class BookingController extends Controller
         }
 
         $room = Room::find($request->room_id);
+        
+        // Check if guests count exceeds room capacity
+        if ($request->has('guests_count') && $request->guests_count > $room->max_guests) {
+            return $this->error([
+                'This room can accommodate a maximum of ' . $room->max_guests . ' guests.'
+            ], 422);
+        }
+        
         $isAvailable = $room->isAvailableForDates(
             $request->check_in_date,
             $request->check_out_date

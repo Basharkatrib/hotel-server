@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Carbon\Carbon;
 
 class Room extends Model
@@ -131,5 +132,21 @@ class Room extends Model
             ->exists();
 
         return !$overlappingBookings;
+    }
+
+    /**
+     * Get the favorites for this room.
+     */
+    public function favorites(): MorphMany
+    {
+        return $this->morphMany(Favorite::class, 'favoritable');
+    }
+
+    /**
+     * Check if a user has favorited this room.
+     */
+    public function isFavoritedBy(int $userId): bool
+    {
+        return $this->favorites()->where('user_id', $userId)->exists();
     }
 }

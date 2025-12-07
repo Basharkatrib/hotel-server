@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Str;
 
 class Hotel extends Model
@@ -103,5 +104,21 @@ class Hotel extends Model
         }
 
         return $slug;
+    }
+
+    /**
+     * Get the favorites for this hotel.
+     */
+    public function favorites(): MorphMany
+    {
+        return $this->morphMany(Favorite::class, 'favoritable');
+    }
+
+    /**
+     * Check if a user has favorited this hotel.
+     */
+    public function isFavoritedBy(int $userId): bool
+    {
+        return $this->favorites()->where('user_id', $userId)->exists();
     }
 }
