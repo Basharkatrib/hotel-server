@@ -149,4 +149,12 @@ class Room extends Model
     {
         return $this->favorites()->where('user_id', $userId)->exists();
     }
+
+    /**
+     * Get all reviews for this room.
+     */
+    public function reviews(): MorphMany
+    {
+        return $this->morphMany(Review::class, 'reviewable');
+    }
 }

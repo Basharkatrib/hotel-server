@@ -121,4 +121,12 @@ class Hotel extends Model
     {
         return $this->favorites()->where('user_id', $userId)->exists();
     }
+
+    /**
+     * Get all reviews for this hotel.
+     */
+    public function reviews(): MorphMany
+    {
+        return $this->morphMany(Review::class, 'reviewable');
+    }
 }

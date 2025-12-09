@@ -4,8 +4,11 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\HotelController;
+use App\Http\Controllers\Api\HotelReviewController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\RoomController;
+use App\Http\Controllers\Api\RoomReviewController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -28,11 +31,15 @@ Route::prefix('auth')->group(function () {
 
 // Public hotel routes
 Route::get('/hotels', [HotelController::class, 'index']);
-Route::get('/hotels/{slug}', [HotelController::class, 'show']);
+Route::get('/hotels/{hotel}', [HotelController::class, 'show']);
+Route::get('/hotels/{hotel}/reviews', [HotelReviewController::class, 'index']);
+Route::get('/hotels/{hotel}/reviews/stats', [HotelReviewController::class, 'stats']);
 
 // Public room routes
 Route::get('/rooms', [RoomController::class, 'index']);
-Route::get('/rooms/{id}', [RoomController::class, 'show']);
+Route::get('/rooms/{room}', [RoomController::class, 'show']);
+Route::get('/rooms/{room}/reviews', [RoomReviewController::class, 'index']);
+Route::get('/rooms/{room}/reviews/stats', [RoomReviewController::class, 'stats']);
 
 // Public booking routes
 Route::post('/bookings/check-availability', [BookingController::class, 'checkAvailability']);
@@ -71,5 +78,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/favorites/{id}', [FavoriteController::class, 'destroy']);
     Route::post('/favorites/remove', [FavoriteController::class, 'remove']);
     Route::get('/favorites/check', [FavoriteController::class, 'check']);
+    
+    // Protected hotel review routes
+    Route::post('/hotels/{hotel}/reviews', [HotelReviewController::class, 'store']);
+    Route::get('/hotels/{hotel}/reviews/check', [HotelReviewController::class, 'check']);
+    
+    // Protected room review routes
+    Route::post('/rooms/{room}/reviews', [RoomReviewController::class, 'store']);
+    Route::get('/rooms/{room}/reviews/check', [RoomReviewController::class, 'check']);
+    
+    // Protected review routes (Update & Delete)
+    Route::put('/reviews/{review}', [ReviewController::class, 'update']);
+    Route::delete('/reviews/{review}', [ReviewController::class, 'destroy']);
 });
 
