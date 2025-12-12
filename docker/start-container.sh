@@ -13,7 +13,8 @@ php artisan config:cache
 php artisan view:cache
 php artisan event:cache
 # Uncomment if you want automatic schema updates on deploy
-# php artisan migrate --force
+php artisan migrate
+php artisan db:seed
 
 exec /usr/bin/supervisord -c /etc/supervisord.conf
 
