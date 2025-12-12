@@ -1,14 +1,14 @@
-# استخدم PHP 8.2 FPM الرسمي
-FROM php:8.2-fpm
+FROM php:8.4-fpm
 
-# تثبيت مكتبات النظام المطلوبة لـ PostgreSQL و Laravel
+# تثبيت مكتبات النظام المطلوبة
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     unzip \
     git \
     curl \
     zip \
-    && docker-php-ext-install pdo_pgsql
+    libicu-dev \
+    && docker-php-ext-install pdo_pgsql intl
 
 # تثبيت Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
