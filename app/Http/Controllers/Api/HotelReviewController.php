@@ -219,3 +219,5 @@ class HotelReviewController extends Controller
         ]);
     }
 }
+
+

@@ -66,3 +66,5 @@ class Review extends Model
         return $query->where('rating', $rating);
     }
 }
+
+
