@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: laravel-app
+    env: docker
+    autoDeploy: true
+    # Render will detect and build from Dockerfile
+    # Set environment variables in the dashboard or via env groups
+
+# Optional worker example (uncomment to use)
+#  - type: worker
+#    name: laravel-worker
+#    env: docker
+#    autoDeploy: true
+#    dockerfilePath: ./Dockerfile
+#    # Override start command if needed via a different entrypoint image,
+#    # or keep the same image and run queue:work in a separate Dockerfile or CMD.
+#    # On Render, workers often use native 'Start Command'. With Docker, you can
+#    # create a small worker Dockerfile if you prefer.
+
+# Optional cron job example (use Render Cron Jobs UI):
+#   Command: php /app/artisan schedule:run
+#   Schedule: every minute
+
+
