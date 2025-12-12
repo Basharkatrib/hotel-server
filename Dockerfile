@@ -1,7 +1,7 @@
-# Use official PHP FPM image
+# استخدم PHP 8.2 FPM الرسمي
 FROM php:8.2-fpm
 
-# Install system dependencies
+# تثبيت مكتبات النظام المطلوبة لـ PostgreSQL و Laravel
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     unzip \
@@ -10,23 +10,27 @@ RUN apt-get update && apt-get install -y \
     zip \
     && docker-php-ext-install pdo_pgsql
 
-# Install Composer
+# تثبيت Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Set working directory
+# تعيين مجلد العمل
 WORKDIR /var/www/html
 
-# Copy project files
+# نسخ المشروع
 COPY . .
 
-# Install PHP dependencies
+# تثبيت الحزم الخاصة بـ Laravel 12
 RUN composer install --no-dev --optimize-autoloader
 
-# Set permissions for Laravel
+# إعداد الصلاحيات لمجلدات Laravel
 RUN chown -R www-data:www-data storage bootstrap/cache
 RUN chmod -R 755 storage bootstrap/cache
 
-# Expose port
+# نسخ سكربت البداية
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
+# فتح المنفذ
 EXPOSE 9000
 
-CMD ["php-fpm"]
+CMD ["/start.sh"]

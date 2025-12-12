@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
-echo "Running composer"
-composer global require hirak/prestissimo
-composer install --no-dev --working-dir=/var/www/html
 
-echo "generating application key..."
-php artisan key:generate --show
+echo "Generating application key..."
+php artisan key:generate --ansi
 
-echo "Caching config..."
+echo "Caching configuration..."
 php artisan config:cache
 
 echo "Caching routes..."
@@ -17,3 +14,6 @@ php artisan migrate --force
 
 echo "Running seeders..."
 php artisan db:seed --force
+
+# تشغيل PHP-FPM
+php-fpm
