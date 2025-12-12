@@ -27,7 +27,7 @@ RUN chown -R www-data:www-data storage bootstrap/cache
 RUN chmod -R 755 storage bootstrap/cache
 
 # نسخ سكربت البداية
-COPY start.sh /start.sh
+COPY scripts/00-laravel-deploy.sh /start.sh
 RUN chmod +x /start.sh
 
 # فتح المنفذ
