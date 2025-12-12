@@ -46,7 +46,7 @@ RUN if [ -f package.json ]; then \
 # ------------------------------
 # Stage 3: Runtime
 # ------------------------------
-FROM php:8.3-fpm-alpine AS runtime
+FROM php:8.4-fpm-alpine AS runtime
 
 WORKDIR /app
 
