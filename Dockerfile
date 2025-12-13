@@ -103,7 +103,7 @@ COPY docker/start-container.sh /usr/local/bin/start-container.sh
 
 RUN chmod +x /usr/local/bin/start-container.sh && \
     mkdir -p /run/nginx && \
-    chown -R www-data:www-data /app/storage /app/bootstrap/cache
+    chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/public
 
 # Render will provide PORT; we don't EXPOSE a fixed port
 CMD ["start-container.sh"]
