@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Storage;
 
 class AuthController extends Controller
 {
@@ -192,10 +193,107 @@ class AuthController extends Controller
             'user' => [
                 'id' => $request->user()->id,
                 'name' => $request->user()->name,
+                'first_name' => $request->user()->first_name,
+                'last_name' => $request->user()->last_name,
                 'email' => $request->user()->email,
+                'avatar' => $request->user()->avatar,
+                'phone' => $request->user()->phone,
+                'gender' => $request->user()->gender,
+                'birthday' => $request->user()->birthday,
+                'address' => $request->user()->address,
+                'country' => $request->user()->country,
+                'zip_code' => $request->user()->zip_code,
                 'email_verified_at' => $request->user()->email_verified_at,
             ],
         ]);
+    }
+
+    /**
+     * Update profile of authenticated user
+     */
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validator = Validator::make($request->all(), [
+            'first_name' => ['nullable', 'string', 'max:255'],
+            'last_name' => ['nullable', 'string', 'max:255'],
+            'avatar' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'gender' => ['nullable', 'in:male,female,other'],
+            'birthday' => ['nullable', 'date'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'country' => ['nullable', 'string', 'max:100'],
+            'zip_code' => ['nullable', 'string', 'max:20'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors()->all(), 422);
+        }
+
+        $data = $validator->validated();
+
+        // Update full name if first_name / last_name provided
+        if (isset($data['first_name']) || isset($data['last_name'])) {
+            $first = $data['first_name'] ?? $user->first_name ?? '';
+            $last = $data['last_name'] ?? $user->last_name ?? '';
+            $fullName = trim($first . ' ' . $last);
+            if ($fullName !== '') {
+                $data['name'] = $fullName;
+            }
+        }
+
+        $user->update($data);
+
+        return $this->success([
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'email' => $user->email,
+                'avatar' => $user->avatar,
+                'phone' => $user->phone,
+                'gender' => $user->gender,
+                'birthday' => $user->birthday,
+                'address' => $user->address,
+                'country' => $user->country,
+                'zip_code' => $user->zip_code,
+                'email_verified_at' => $user->email_verified_at,
+            ],
+        ], ['Profile updated successfully.']);
+    }
+
+    /**
+     * Upload and update user avatar (profile image)
+     */
+    public function uploadAvatar(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validator = Validator::make($request->all(), [
+            'avatar' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors()->all(), 422);
+        }
+
+        // Delete old avatar file if it exists and is stored in /storage
+        if ($user->avatar && str_starts_with($user->avatar, '/storage/')) {
+            $oldPath = str_replace('/storage/', '', $user->avatar);
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        $path = $request->file('avatar')->store('avatars', 'public');
+        $url = '/storage/' . $path;
+
+        $user->avatar = $url;
+        $user->save();
+
+        return $this->success([
+            'avatar' => $url,
+        ], ['Avatar updated successfully.']);
     }
 
     /**

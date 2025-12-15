@@ -50,6 +50,8 @@ Route::post('/payments/webhook', [PaymentController::class, 'webhook']);
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
+    Route::put('/user/profile', [AuthController::class, 'updateProfile']);
+    Route::post('/user/avatar', [AuthController::class, 'uploadAvatar']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     
     // Protected hotel routes (admin only)

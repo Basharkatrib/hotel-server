@@ -8,6 +8,7 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Database\Eloquent\Builder;
 
 class HotelController extends Controller
 {
@@ -37,6 +38,18 @@ class HotelController extends Controller
             $query->where('city', 'like', '%' . $request->city . '%');
         }
 
+        // Guests filter: hotels that have at least one room
+        // which can accommodate the requested number of guests.
+        if ($request->filled('guests')) {
+            $guests = (int) $request->get('guests');
+
+            if ($guests > 0) {
+                $query->whereHas('rooms', function (Builder $q) use ($guests) {
+                    $q->where('max_guests', '>=', $guests);
+                });
+            }
+        }
+
         if ($request->has('has_free_cancellation') && $request->has_free_cancellation) {
             $query->where('has_free_cancellation', true);
         }
@@ -60,6 +73,9 @@ class HotelController extends Controller
         if (in_array($sortBy, ['price_per_night', 'rating', 'created_at'])) {
             $query->orderBy($sortBy, $sortOrder);
         }
+
+        // Include max capacity per hotel based on related rooms
+        $query->withMax('rooms as max_guests_capacity', 'max_guests');
 
         // Pagination
         $perPage = $request->get('per_page', 15);
@@ -95,8 +111,6 @@ class HotelController extends Controller
             'original_price' => ['nullable', 'numeric', 'min:0'],
             'discount_percentage' => ['integer', 'min:0', 'max:100'],
             'type' => ['required', 'in:hotel,room,entire_home'],
-            'rating' => ['numeric', 'between:0,5'],
-            'reviews_count' => ['integer', 'min:0'],
             'room_type' => ['nullable', 'string'],
             'bed_type' => ['nullable', 'string'],
             'room_size' => ['nullable', 'integer', 'min:0'],
@@ -119,7 +133,12 @@ class HotelController extends Controller
             return $this->error($validator->errors()->all(), 422);
         }
 
-        $hotel = Hotel::create($request->all());
+        $data = $request->except(['rating', 'reviews_count']);
+
+        $hotel = Hotel::create($data + [
+            'rating' => 0,
+            'reviews_count' => 0,
+        ]);
 
         return $this->success(
             ['hotel' => $hotel],
@@ -168,8 +187,6 @@ class HotelController extends Controller
             'original_price' => ['nullable', 'numeric', 'min:0'],
             'discount_percentage' => ['integer', 'min:0', 'max:100'],
             'type' => ['in:hotel,room,entire_home'],
-            'rating' => ['numeric', 'between:0,5'],
-            'reviews_count' => ['integer', 'min:0'],
             'room_type' => ['nullable', 'string'],
             'bed_type' => ['nullable', 'string'],
             'room_size' => ['nullable', 'integer', 'min:0'],
@@ -192,7 +209,10 @@ class HotelController extends Controller
             return $this->error($validator->errors()->all(), 422);
         }
 
-        $hotel->update($request->all());
+        // لا نسمح بتعديل rating و reviews_count من لوحة التحكم
+        $data = $request->except(['rating', 'reviews_count']);
+
+        $hotel->update($data);
 
         return $this->success(
             ['hotel' => $hotel->fresh()],
