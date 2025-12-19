@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cookie;
 
 class AuthController extends Controller
 {
@@ -115,6 +116,21 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
+        // إرسال التوكن كـ HTTP-only cookie بدلاً من JSON
+        // مع Vite proxy، جميع الطلبات من نفس الـ origin، لذا نستخدم sameSite: 'lax'
+        // نستخدم null كـ domain للسماح للمتصفح بقبول cookie بغض النظر عن domain
+        $cookie = cookie(
+            'auth_token',
+            $token,
+            1, // 7 days
+            '/', // path
+            null, // domain: null للسماح للمتصفح بقبول cookie من أي domain (مفيد مع proxy)
+            false, // secure: false for localhost
+            true, // httpOnly: true
+            false, // raw: false
+            'lax' // sameSite: 'lax'
+        );
+
         return $this->success([
             'user' => [
                 'id' => $user->id,
@@ -122,8 +138,7 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'email_verified_at' => $user->email_verified_at,
             ],
-            'token' => $token,
-        ], ['Login successful.']);
+        ], ['Login successful.'])->cookie($cookie);
     }
 
     /**
@@ -163,6 +178,21 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
+        // إرسال التوكن كـ HTTP-only cookie بدلاً من JSON
+        // مع Vite proxy، جميع الطلبات من نفس الـ origin، لذا نستخدم sameSite: 'lax'
+        // نستخدم null كـ domain للسماح للمتصفح بقبول cookie بغض النظر عن domain
+        $cookie = cookie(
+            'auth_token',
+            $token,
+            60 * 24 * 7, // 7 days
+            '/', // path
+            null, // domain: null للسماح للمتصفح بقبول cookie من أي domain (مفيد مع proxy)
+            false, // secure: false for localhost
+            true, // httpOnly: true
+            false, // raw: false
+            'lax' // sameSite: 'lax'
+        );
+
         return $this->success([
             'user' => [
                 'id' => $user->id,
@@ -170,8 +200,7 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'email_verified_at' => $user->email_verified_at,
             ],
-            'token' => $token,
-        ], ['Login successful.']);
+        ], ['Login successful.'])->cookie($cookie);
     }
 
     /**
@@ -181,7 +210,10 @@ class AuthController extends Controller
     {
         $request->user()->currentAccessToken()->delete();
 
-        return $this->success(null, ['Logged out successfully.']);
+        // حذف cookie التوكن
+        $cookie = cookie()->forget('auth_token');
+
+        return $this->success(null, ['Logged out successfully.'])->cookie($cookie);
     }
 
     /**
@@ -189,21 +221,28 @@ class AuthController extends Controller
      */
     public function user(Request $request): JsonResponse
     {
+        $user = $request->user();
+        
+        // إذا لم يكن هناك مستخدم مسجل دخول، يعيد 401
+        if (!$user) {
+            return $this->error(['Unauthenticated. Please login to continue.'], 401);
+        }
+        
         return $this->success([
             'user' => [
-                'id' => $request->user()->id,
-                'name' => $request->user()->name,
-                'first_name' => $request->user()->first_name,
-                'last_name' => $request->user()->last_name,
-                'email' => $request->user()->email,
-                'avatar' => $request->user()->avatar,
-                'phone' => $request->user()->phone,
-                'gender' => $request->user()->gender,
-                'birthday' => $request->user()->birthday,
-                'address' => $request->user()->address,
-                'country' => $request->user()->country,
-                'zip_code' => $request->user()->zip_code,
-                'email_verified_at' => $request->user()->email_verified_at,
+                'id' => $user->id,
+                'name' => $user->name,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'email' => $user->email,
+                'avatar' => $user->avatar,
+                'phone' => $user->phone,
+                'gender' => $user->gender,
+                'birthday' => $user->birthday,
+                'address' => $user->address,
+                'country' => $user->country,
+                'zip_code' => $user->zip_code,
+                'email_verified_at' => $user->email_verified_at,
             ],
         ]);
     }

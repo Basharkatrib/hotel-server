@@ -5,6 +5,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Auth\AuthenticationException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -16,7 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // إضافة middleware لقراءة التوكن من cookie
+        $middleware->api(prepend: [
+            \App\Http\Middleware\AuthenticateWithCookie::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Handle API exceptions with unified response format
@@ -25,7 +29,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 $status = 500;
                 $messages = ['An error occurred. Please try again.'];
 
-                if ($e instanceof ValidationException) {
+                if ($e instanceof AuthenticationException) {
+                    // إذا كان الخطأ AuthenticationException (من Sanctum)، يعني غير مسجل دخول
+                    $status = 401;
+                    $messages = ['Unauthenticated. Please login to continue.'];
+                } elseif ($e instanceof ValidationException) {
                     $status = 422;
                     $messages = collect($e->errors())->flatten()->toArray();
                 } elseif ($e instanceof NotFoundHttpException) {
