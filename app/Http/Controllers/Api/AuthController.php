@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
@@ -114,22 +114,14 @@ class AuthController extends Controller
             );
         }
 
-        $token = $user->createToken('auth-token')->plainTextToken;
+        // حذف أي session قديم قبل تسجيل الدخول الجديد
+        // هذا يضمن عدم وجود تعارض مع sessions قديمة
+        if ($request->hasSession()) {
+            $request->session()->regenerate();
+        }
 
-        // إرسال التوكن كـ HTTP-only cookie بدلاً من JSON
-        // مع Vite proxy، جميع الطلبات من نفس الـ origin، لذا نستخدم sameSite: 'lax'
-        // نستخدم null كـ domain للسماح للمتصفح بقبول cookie بغض النظر عن domain
-        $cookie = cookie(
-            'auth_token',
-            $token,
-            1, // 7 days
-            '/', // path
-            null, // domain: null للسماح للمتصفح بقبول cookie من أي domain (مفيد مع proxy)
-            false, // secure: false for localhost
-            true, // httpOnly: true
-            false, // raw: false
-            'lax' // sameSite: 'lax'
-        );
+        // استخدام Laravel session-based authentication بدلاً من token
+        Auth::login($user);
 
         return $this->success([
             'user' => [
@@ -138,7 +130,7 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'email_verified_at' => $user->email_verified_at,
             ],
-        ], ['Login successful.'])->cookie($cookie);
+        ], ['Login successful.']);
     }
 
     /**
@@ -176,22 +168,8 @@ class AuthController extends Controller
             return $this->error(['User not found.'], 404);
         }
 
-        $token = $user->createToken('auth-token')->plainTextToken;
-
-        // إرسال التوكن كـ HTTP-only cookie بدلاً من JSON
-        // مع Vite proxy، جميع الطلبات من نفس الـ origin، لذا نستخدم sameSite: 'lax'
-        // نستخدم null كـ domain للسماح للمتصفح بقبول cookie بغض النظر عن domain
-        $cookie = cookie(
-            'auth_token',
-            $token,
-            60 * 24 * 7, // 7 days
-            '/', // path
-            null, // domain: null للسماح للمتصفح بقبول cookie من أي domain (مفيد مع proxy)
-            false, // secure: false for localhost
-            true, // httpOnly: true
-            false, // raw: false
-            'lax' // sameSite: 'lax'
-        );
+        // استخدام Laravel session-based authentication بدلاً من token
+        Auth::login($user);
 
         return $this->success([
             'user' => [
@@ -200,7 +178,7 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'email_verified_at' => $user->email_verified_at,
             ],
-        ], ['Login successful.'])->cookie($cookie);
+        ], ['Login successful.']);
     }
 
     /**
@@ -208,12 +186,14 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        // مع session-based authentication، نحتاج فقط لحذف session
+        // Auth::logout() لا يعمل مع RequestGuard في Sanctum
+        if ($request->hasSession()) {
+            // حذف جميع بيانات session
+            $request->session()->flush();
+        }
 
-        // حذف cookie التوكن
-        $cookie = cookie()->forget('auth_token');
-
-        return $this->success(null, ['Logged out successfully.'])->cookie($cookie);
+        return $this->success(null, ['Logged out successfully.']);
     }
 
     /**
@@ -393,6 +373,12 @@ class AuthController extends Controller
 
         $otp->markAsUsed();
 
+        
+        if ($request->hasSession()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+
         return $this->success(null, ['Password has been reset successfully.']);
     }
 
@@ -433,6 +419,13 @@ class AuthController extends Controller
         }
 
         $otp->markAsUsed();
+
+        // التأكد من أن session نظيف بعد verify email
+        // هذا يضمن عدم وجود تعارض عند تسجيل الدخول
+        if ($request->hasSession()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         return $this->success(
             [

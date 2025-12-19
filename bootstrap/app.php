@@ -17,20 +17,19 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // إضافة middleware لقراءة التوكن من cookie
+        // AuthenticateWithCookie middleware removed - using Sanctum session-based auth
+        // Add EnsureFrontendRequestsAreStateful for Sanctum cookie-based authentication
         $middleware->api(prepend: [
-            \App\Http\Middleware\AuthenticateWithCookie::class,
+            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        // Handle API exceptions with unified response format
         $exceptions->render(function (\Throwable $e, Request $request) {
             if ($request->is('api/*')) {
                 $status = 500;
                 $messages = ['An error occurred. Please try again.'];
 
                 if ($e instanceof AuthenticationException) {
-                    // إذا كان الخطأ AuthenticationException (من Sanctum)، يعني غير مسجل دخول
                     $status = 401;
                     $messages = ['Unauthenticated. Please login to continue.'];
                 } elseif ($e instanceof ValidationException) {
