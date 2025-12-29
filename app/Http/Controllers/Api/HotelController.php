@@ -9,6 +9,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 
 class HotelController extends Controller
 {
@@ -20,6 +22,11 @@ class HotelController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Hotel::query();
+
+        // If user is hotel owner, show only their hotels
+        if ($request->user() && $request->user()->isHotelOwner()) {
+            $query->where('user_id', $request->user()->id);
+        }
 
         // Filters
         if ($request->has('type') && $request->type !== 'any') {
@@ -99,6 +106,11 @@ class HotelController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        // Check authorization
+        if (Gate::denies('create', Hotel::class)) {
+            return $this->error(['You do not have permission to create hotels.'], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
@@ -134,6 +146,11 @@ class HotelController extends Controller
         }
 
         $data = $request->except(['rating', 'reviews_count']);
+
+        // If user is hotel owner, set user_id automatically
+        if ($request->user() && $request->user()->isHotelOwner()) {
+            $data['user_id'] = $request->user()->id;
+        }
 
         $hotel = Hotel::create($data + [
             'rating' => 0,
@@ -173,6 +190,11 @@ class HotelController extends Controller
 
         if (!$hotel) {
             return $this->error(['Hotel not found.'], 404);
+        }
+
+        // Check authorization
+        if (Gate::denies('update', $hotel)) {
+            return $this->error(['You do not have permission to update this hotel.'], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -223,7 +245,7 @@ class HotelController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
         $hotel = Hotel::find($id);
 
@@ -231,11 +253,112 @@ class HotelController extends Controller
             return $this->error(['Hotel not found.'], 404);
         }
 
+        // Check authorization
+        if (Gate::denies('delete', $hotel)) {
+            return $this->error(['You do not have permission to delete this hotel.'], 403);
+        }
+
         $hotel->delete();
 
         return $this->success(
             null,
             ['Hotel deleted successfully.']
+        );
+    }
+
+    /**
+     * Upload images for a hotel
+     */
+    public function uploadImages(Request $request, int $id): JsonResponse
+    {
+        $hotel = Hotel::find($id);
+
+        if (!$hotel) {
+            return $this->error(['Hotel not found.'], 404);
+        }
+
+        // Check authorization
+        if (Gate::denies('update', $hotel)) {
+            return $this->error(['You do not have permission to update this hotel.'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'images' => ['required', 'array', 'min:1', 'max:10'],
+            'images.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'], // 5MB max per image
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors()->all(), 422);
+        }
+
+        $uploadedImages = [];
+        $currentImages = $hotel->images ?? [];
+
+        foreach ($request->file('images') as $image) {
+            $path = $image->store('hotels/' . $hotel->id, 'public');
+            $url = 'http://127.0.0.1:8000/storage/' . $path;
+            $uploadedImages[] = $url;
+        }
+
+        // Merge with existing images
+        $allImages = array_merge($currentImages, $uploadedImages);
+
+        $hotel->update(['images' => $allImages]);
+
+        return $this->success(
+            [
+                'hotel' => $hotel->fresh(),
+                'uploaded_images' => $uploadedImages,
+            ],
+            ['Images uploaded successfully.']
+        );
+    }
+
+    /**
+     * Delete an image from a hotel
+     */
+    public function deleteImage(Request $request, int $id): JsonResponse
+    {
+        $hotel = Hotel::find($id);
+
+        if (!$hotel) {
+            return $this->error(['Hotel not found.'], 404);
+        }
+
+        // Check authorization
+        if (Gate::denies('update', $hotel)) {
+            return $this->error(['You do not have permission to update this hotel.'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'image_url' => ['required', 'string'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors()->all(), 422);
+        }
+
+        $imageUrl = $request->image_url;
+        $currentImages = $hotel->images ?? [];
+
+        // Remove image from array
+        $updatedImages = array_filter($currentImages, function ($img) use ($imageUrl) {
+            return $img !== $imageUrl;
+        });
+
+        // Delete file from storage if it exists
+        if (str_starts_with($imageUrl, '/storage/')) {
+            $filePath = str_replace('/storage/', '', $imageUrl);
+            Storage::disk('public')->delete($filePath);
+        }
+
+        $hotel->update(['images' => array_values($updatedImages)]);
+
+        return $this->success(
+            [
+                'hotel' => $hotel->fresh(),
+            ],
+            ['Image deleted successfully.']
         );
     }
 }

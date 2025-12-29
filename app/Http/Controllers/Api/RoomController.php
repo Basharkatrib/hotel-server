@@ -8,6 +8,8 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 
 class RoomController extends Controller
 {
@@ -19,6 +21,13 @@ class RoomController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Room::with('hotel:id,name,city,address');
+
+        // If user is hotel owner, show only rooms from their hotels
+        if ($request->user() && $request->user()->isHotelOwner()) {
+            $query->whereHas('hotel', function ($q) use ($request) {
+                $q->where('user_id', $request->user()->id);
+            });
+        }
 
         // Filter by hotel
         if ($request->has('hotel_id')) {
@@ -188,6 +197,11 @@ class RoomController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        // Check authorization
+        if (Gate::denies('create', Room::class)) {
+            return $this->error(['You do not have permission to create rooms.'], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'hotel_id' => ['required', 'exists:hotels,id'],
             'name' => ['required', 'string', 'max:255'],
@@ -222,6 +236,14 @@ class RoomController extends Controller
 
         if ($validator->fails()) {
             return $this->error($validator->errors()->all(), 422);
+        }
+
+        // If user is hotel owner, verify they own the hotel
+        if ($request->user() && $request->user()->isHotelOwner()) {
+            $hotel = \App\Models\Hotel::find($request->hotel_id);
+            if (!$hotel || !$hotel->isOwnedBy($request->user()->id)) {
+                return $this->error(['You can only create rooms for your own hotels.'], 403);
+            }
         }
 
         $room = Room::create($request->all());
@@ -259,6 +281,11 @@ class RoomController extends Controller
 
         if (!$room) {
             return $this->error(['Room not found.'], 404);
+        }
+
+        // Check authorization
+        if (Gate::denies('update', $room)) {
+            return $this->error(['You do not have permission to update this room.'], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -308,7 +335,7 @@ class RoomController extends Controller
     /**
      * Remove the specified room.
      */
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
         $room = Room::find($id);
 
@@ -316,11 +343,122 @@ class RoomController extends Controller
             return $this->error(['Room not found.'], 404);
         }
 
+        // Check authorization
+        if (Gate::denies('delete', $room)) {
+            return $this->error(['You do not have permission to delete this room.'], 403);
+        }
+
         $room->delete();
 
         return $this->success(
             null,
             ['Room deleted successfully.']
+        );
+    }
+
+    /**
+     * Upload images for the specified room.
+     */
+    public function uploadImages(Request $request, int $id): JsonResponse
+    {
+        $room = Room::find($id);
+
+        if (!$room) {
+            return $this->error(['Room not found.'], 404);
+        }
+
+        // Check authorization (using update policy)
+        if (Gate::denies('update', $room)) {
+            return $this->error(['You do not have permission to update this room.'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'images' => ['required', 'array'],
+            'images.*' => ['image', 'mimes:jpeg,png,jpg,gif', 'max:5120'], // Max 5MB
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors()->all(), 422);
+        }
+
+        $uploadedImages = [];
+        $currentImages = $room->images ?? [];
+
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $image) {
+                // Store image in public/rooms/{id} folder
+                $path = $image->store("rooms/{$room->id}", 'public');
+                $url = "/storage/{$path}";
+                $uploadedImages[] = $url;
+                $currentImages[] = $url;
+            }
+        }
+
+        $room->images = $currentImages;
+        $room->save();
+
+        return $this->success(
+            [
+                'room' => $room->fresh(),
+                'uploaded_images' => $uploadedImages
+            ],
+            ['Images uploaded successfully.']
+        );
+    }
+
+    /**
+     * Delete an image from the specified room.
+     */
+    public function deleteImage(Request $request, int $id): JsonResponse
+    {
+        $room = Room::find($id);
+
+        if (!$room) {
+            return $this->error(['Room not found.'], 404);
+        }
+
+        // Check authorization
+        if (Gate::denies('update', $room)) {
+            return $this->error(['You do not have permission to update this room.'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'image_url' => ['required', 'string'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors()->all(), 422);
+        }
+
+        $imageUrl = $request->image_url;
+        $currentImages = $room->images ?? [];
+        
+        // Check if image exists in room's images array
+        if (!in_array($imageUrl, $currentImages)) {
+            return $this->error(['Image not found in this room.'], 404);
+        }
+
+        // Remove from array
+        $updatedImages = array_values(array_filter($currentImages, function ($img) use ($imageUrl) {
+            return $img !== $imageUrl;
+        }));
+
+        $room->images = $updatedImages;
+        $room->save();
+
+        // Delete valid file from storage if it exists on our server
+        // URL format: /storage/rooms/1/filename.jpg
+        // Storage path: rooms/1/filename.jpg
+        if (str_starts_with($imageUrl, '/storage/')) {
+            $storagePath = str_replace('/storage/', '', $imageUrl);
+            if (Storage::disk('public')->exists($storagePath)) {
+                Storage::disk('public')->delete($storagePath);
+            }
+        }
+
+        return $this->success(
+            ['room' => $room->fresh()],
+            ['Image deleted successfully.']
         );
     }
 }

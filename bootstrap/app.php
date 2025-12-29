@@ -19,8 +19,21 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // AuthenticateWithCookie middleware removed - using Sanctum session-based auth
         // Add EnsureFrontendRequestsAreStateful for Sanctum cookie-based authentication
+        // This middleware enables session-based authentication for API routes
         $middleware->api(prepend: [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            \App\Http\Middleware\SetSameSiteNone::class,
+        ]);
+        
+        // Exclude API routes from CSRF verification
+        $middleware->validateCsrfTokens(except: [
+            'api/*',
+            'sanctum/csrf-cookie',
+        ]);
+        
+        // Register CheckRole middleware
+        $middleware->alias([
+            'role' => \App\Http\Middleware\CheckRole::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -41,9 +54,19 @@ return Application::configure(basePath: dirname(__DIR__))
                 } elseif ($e instanceof HttpException) {
                     $status = $e->getStatusCode();
                     $messages = [$e->getMessage() ?: 'An error occurred.'];
+                    
+                    // Handle 419 CSRF token mismatch
+                    if ($status === 419) {
+                        $messages = ['CSRF token mismatch. Please refresh the page and try again.'];
+                    }
                 } elseif (method_exists($e, 'getStatusCode')) {
                     $status = $e->getStatusCode();
                     $messages = [$e->getMessage()];
+                    
+                    // Handle 419 CSRF token mismatch
+                    if ($status === 419) {
+                        $messages = ['CSRF token mismatch. Please refresh the page and try again.'];
+                    }
                 }
 
                 return response()->json([

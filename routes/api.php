@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\RoomController;
 use App\Http\Controllers\Api\RoomReviewController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -54,17 +55,41 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/user/avatar', [AuthController::class, 'uploadAvatar']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     
-    // Protected hotel routes (admin only)
+    // Protected user routes (admin only)
+    Route::get('/users', [UserController::class, 'index']);
+    Route::get('/users/{id}', [UserController::class, 'show']);
+    Route::post('/users', [UserController::class, 'store']);
+    Route::put('/users/{id}', [UserController::class, 'update']);
+    Route::delete('/users/{id}', [UserController::class, 'destroy']);
+    
+    // Protected hotel routes
+    // create: admin only (checked in HotelPolicy)
+    // update: admin or hotel_owner (for their hotels only, checked in HotelPolicy)
+    // delete: admin only (checked in HotelPolicy)
+    
+    // يمكن استخدام middleware هنا أيضاً: Route::middleware('role:admin')->group(...)
+    // لكننا نستخدم Policies لأنها أكثر مرونة (تتحقق من الملكية أيضاً)
     Route::post('/hotels', [HotelController::class, 'store']);
     Route::put('/hotels/{id}', [HotelController::class, 'update']);
     Route::delete('/hotels/{id}', [HotelController::class, 'destroy']);
+    Route::post('/hotels/{id}/images', [HotelController::class, 'uploadImages']);
+    Route::delete('/hotels/{id}/images', [HotelController::class, 'deleteImage']);
     
-    // Protected room routes (admin only)
+    // Protected room routes
+    // create: admin or hotel_owner (checked in RoomPolicy)
+    // update: admin or hotel_owner (for their hotels only, checked in RoomPolicy)
+    // delete: admin or hotel_owner (for their hotels only, checked in RoomPolicy)
     Route::post('/rooms', [RoomController::class, 'store']);
     Route::put('/rooms/{id}', [RoomController::class, 'update']);
     Route::delete('/rooms/{id}', [RoomController::class, 'destroy']);
+    Route::post('/rooms/{id}/images', [RoomController::class, 'uploadImages']);
+    Route::delete('/rooms/{id}/images', [RoomController::class, 'deleteImage']);
     
     // Protected booking routes
+    // index: filtered by role (admin: all, hotel_owner: their hotels, user: their own)
+    // create: user only (checked in BookingPolicy)
+    // show: admin (all), hotel_owner (their hotels), user (their own) - checked in BookingPolicy
+    // cancel: admin (all), hotel_owner (their hotels), user (their own) - checked in BookingPolicy
     Route::get('/bookings', [BookingController::class, 'index']);
     Route::post('/bookings', [BookingController::class, 'store']);
     Route::get('/bookings/{id}', [BookingController::class, 'show']);

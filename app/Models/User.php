@@ -33,6 +33,7 @@ class User extends Authenticatable
         'country',
         'zip_code',
         'password',
+        'role',
     ];
 
     /**
@@ -89,5 +90,37 @@ class User extends Authenticatable
     public function reviews(): HasMany
     {
         return $this->hasMany(Review::class);
+    }
+
+    /**
+     * Get the hotels owned by this user.
+     */
+    public function hotels(): HasMany
+    {
+        return $this->hasMany(Hotel::class);
+    }
+
+    /**
+     * Check if user is admin.
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    /**
+     * Check if user is hotel owner.
+     */
+    public function isHotelOwner(): bool
+    {
+        return $this->role === 'hotel_owner';
+    }
+
+    /**
+     * Check if user is regular user.
+     */
+    public function isRegularUser(): bool
+    {
+        return $this->role === 'user';
     }
 }

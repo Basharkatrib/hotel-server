@@ -157,4 +157,16 @@ class Room extends Model
     {
         return $this->morphMany(Review::class, 'reviewable');
     }
+
+    /**
+     * Check if room is owned by user (through hotel).
+     */
+    public function isOwnedBy(int $userId): bool
+    {
+        // Load hotel relationship if not already loaded
+        if (!$this->relationLoaded('hotel')) {
+            $this->load('hotel');
+        }
+        return $this->hotel && $this->hotel->isOwnedBy($userId);
+    }
 }

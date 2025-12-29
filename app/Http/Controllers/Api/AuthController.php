@@ -38,6 +38,7 @@ class AuthController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'role' => 'user', // Default role
         ]);
 
         // Send verification OTP
@@ -114,20 +115,24 @@ class AuthController extends Controller
             );
         }
 
-        // حذف أي session قديم قبل تسجيل الدخول الجديد
-        // هذا يضمن عدم وجود تعارض مع sessions قديمة
-        if ($request->hasSession()) {
-            $request->session()->regenerate();
-        }
-
         // استخدام Laravel session-based authentication بدلاً من token
-        Auth::login($user);
+        Auth::login($user, $request->has('remember')); // Remember me option
+        
+        // Regenerate session ID for security after login (only once)
+        $request->session()->regenerate();
+        
+        // Ensure session is saved and committed
+        $request->session()->save();
+        
+        // Force session to be written immediately
+        session()->save();
 
         return $this->success([
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'role' => $user->role,
                 'email_verified_at' => $user->email_verified_at,
             ],
         ], ['Login successful.']);
@@ -176,6 +181,7 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'role' => $user->role,
                 'email_verified_at' => $user->email_verified_at,
             ],
         ], ['Login successful.']);
@@ -201,10 +207,37 @@ class AuthController extends Controller
      */
     public function user(Request $request): JsonResponse
     {
-        $user = $request->user();
+        // Log request details for debugging
+        \Log::info('User request', [
+            'session_id' => $request->hasSession() ? $request->session()->getId() : 'no-session',
+            'has_session' => $request->hasSession(),
+            'cookies' => array_keys($request->cookies->all()),
+            'auth_check' => Auth::check(),
+        ]);
+        
+        // Try to get user from Sanctum guard first
+        $user = $request->user('sanctum');
+        
+        // If not found, try web guard
+        if (!$user) {
+            $user = Auth::guard('web')->user();
+        }
+        
+        // If still not found, try default guard
+        if (!$user) {
+            $user = Auth::user();
+        }
         
         // إذا لم يكن هناك مستخدم مسجل دخول، يعيد 401
         if (!$user) {
+            // Log for debugging
+            \Log::warning('Unauthenticated user request', [
+                'session_id' => $request->hasSession() ? $request->session()->getId() : 'no-session',
+                'has_session' => $request->hasSession(),
+                'cookies' => array_keys($request->cookies->all()),
+                'auth_check' => Auth::check(),
+            ]);
+            
             return $this->error(['Unauthenticated. Please login to continue.'], 401);
         }
         
@@ -215,6 +248,7 @@ class AuthController extends Controller
                 'first_name' => $user->first_name,
                 'last_name' => $user->last_name,
                 'email' => $user->email,
+                'role' => $user->role,
                 'avatar' => $user->avatar,
                 'phone' => $user->phone,
                 'gender' => $user->gender,
@@ -271,6 +305,7 @@ class AuthController extends Controller
                 'first_name' => $user->first_name,
                 'last_name' => $user->last_name,
                 'email' => $user->email,
+                'role' => $user->role,
                 'avatar' => $user->avatar,
                 'phone' => $user->phone,
                 'gender' => $user->gender,
@@ -420,8 +455,7 @@ class AuthController extends Controller
 
         $otp->markAsUsed();
 
-        // التأكد من أن session نظيف بعد verify email
-        // هذا يضمن عدم وجود تعارض عند تسجيل الدخول
+
         if ($request->hasSession()) {
             $request->session()->invalidate();
             $request->session()->regenerateToken();

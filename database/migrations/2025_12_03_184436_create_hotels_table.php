@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('hotels', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade')->index();
             $table->string('name');
             $table->string('slug')->unique();
             $table->text('description')->nullable();

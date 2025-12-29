@@ -9,6 +9,7 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Gate;
 use Carbon\Carbon;
 
 class BookingController extends Controller
@@ -88,8 +89,22 @@ class BookingController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Booking::with(['room', 'hotel', 'payment'])
-            ->where('user_id', $request->user()->id);
+        $user = $request->user();
+        $query = Booking::with(['room', 'hotel', 'payment']);
+
+        // Filter bookings based on user role
+        if ($user->isAdmin()) {
+            // Admin can see all bookings
+            // No filter needed
+        } elseif ($user->isHotelOwner()) {
+            // Hotel owner can see bookings for their hotels only
+            $query->whereHas('hotel', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
+        } else {
+            // Regular user can see only their own bookings
+            $query->where('user_id', $user->id);
+        }
 
         // Filter by status
         if ($request->has('status')) {
@@ -123,6 +138,11 @@ class BookingController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        // Check authorization
+        if (Gate::denies('create', Booking::class)) {
+            return $this->error(['You do not have permission to create bookings.'], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'room_id' => ['required', 'exists:rooms,id'],
             'hotel_id' => ['required', 'exists:hotels,id'],
@@ -196,13 +216,15 @@ class BookingController extends Controller
      */
     public function show(Request $request, int $id): JsonResponse
     {
-        $booking = Booking::with(['room', 'hotel', 'payment'])
-            ->where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->first();
+        $booking = Booking::with(['room', 'hotel', 'payment'])->find($id);
 
         if (!$booking) {
             return $this->error(['Booking not found.'], 404);
+        }
+
+        // Check authorization
+        if (Gate::denies('view', $booking)) {
+            return $this->error(['You do not have permission to view this booking.'], 403);
         }
 
         return $this->success(
@@ -216,12 +238,15 @@ class BookingController extends Controller
      */
     public function cancel(Request $request, int $id): JsonResponse
     {
-        $booking = Booking::where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->first();
+        $booking = Booking::find($id);
 
         if (!$booking) {
             return $this->error(['Booking not found.'], 404);
+        }
+
+        // Check authorization
+        if (Gate::denies('cancel', $booking)) {
+            return $this->error(['You do not have permission to cancel this booking.'], 403);
         }
 
         if (!$booking->canBeCancelled()) {

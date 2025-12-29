@@ -28,6 +28,9 @@ return new class extends Migration
             $table->string('country')->nullable();
             $table->string('zip_code', 20)->nullable();
 
+            // Role: user (default), admin, hotel_owner
+            $table->enum('role', ['user', 'admin', 'hotel_owner'])->default('user')->index();
+
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();

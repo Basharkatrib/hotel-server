@@ -138,4 +138,24 @@ class Booking extends Model
         return in_array($this->status, ['pending', 'confirmed']) 
                && $this->check_in_date->isFuture();
     }
+
+    /**
+     * Check if booking is owned by user.
+     */
+    public function isOwnedBy(int $userId): bool
+    {
+        return $this->user_id === $userId;
+    }
+
+    /**
+     * Check if booking belongs to a hotel owned by user.
+     */
+    public function isOwnedByHotelOwner(int $userId): bool
+    {
+        // Load hotel relationship if not already loaded
+        if (!$this->relationLoaded('hotel')) {
+            $this->load('hotel');
+        }
+        return $this->hotel && $this->hotel->isOwnedBy($userId);
+    }
 }
