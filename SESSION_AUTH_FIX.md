@@ -147,3 +147,4 @@ fetch('http://127.0.0.1:8000/api/user', {
 3. **Same-Site**: يجب أن يكون `lax` وليس `strict` للسماح بـ cross-site requests
 4. **Credentials**: يجب أن يكون `include` في جميع الـ fetch requests
 
+

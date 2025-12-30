@@ -79,3 +79,4 @@ $middleware->validateCsrfTokens(except: [
 3. **Sanctum**: يستخدم CSRF token تلقائياً عند استخدام session-based auth
 4. **Headers**: يجب إضافة `X-Requested-With: XMLHttpRequest` في جميع requests
 
+
