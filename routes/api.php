@@ -9,7 +9,7 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\RoomController;
 use App\Http\Controllers\Api\RoomReviewController;
-use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -38,6 +38,7 @@ Route::get('/hotels/{hotel}/reviews/stats', [HotelReviewController::class, 'stat
 
 // Public room routes
 Route::get('/rooms', [RoomController::class, 'index']);
+Route::get('/rooms/recommend', [RoomController::class, 'recommend']);
 Route::get('/rooms/{room}', [RoomController::class, 'show']);
 Route::get('/rooms/{room}/reviews', [RoomReviewController::class, 'index']);
 Route::get('/rooms/{room}/reviews/stats', [RoomReviewController::class, 'stats']);
@@ -117,5 +118,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Protected review routes (Update & Delete)
     Route::put('/reviews/{review}', [ReviewController::class, 'update']);
     Route::delete('/reviews/{review}', [ReviewController::class, 'destroy']);
+
+    // Notifications
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::put('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 });
 

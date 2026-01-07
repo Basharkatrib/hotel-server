@@ -461,4 +461,83 @@ class RoomController extends Controller
             ['Image deleted successfully.']
         );
     }
+
+    /**
+     * Get smart recommendations for rooms based on user preferences.
+     */
+    public function recommend(Request $request): JsonResponse
+    {
+        $query = Room::with('hotel:id,name,city,address,images,rating')
+            ->where('is_active', true);
+
+        // 1. Hard Filters (Location & Capacity)
+        if ($request->filled('city')) {
+            $query->whereHas('hotel', function ($q) use ($request) {
+                $q->where('city', 'like', '%' . $request->city . '%');
+            });
+        }
+
+        if ($request->filled('guests')) {
+            $query->where('max_guests', '>=', (int) $request->guests);
+        }
+
+        if ($request->filled('min_price')) {
+            $query->where('price_per_night', '>=', (float) $request->min_price);
+        }
+
+        if ($request->filled('max_price')) {
+            $query->where('price_per_night', '<=', (float) $request->max_price);
+        }
+
+        // 2. Soft Filters / Scoring System (AI-like)
+        // We fetch all potential candidates and then score them in the collection
+        $rooms = $query->get();
+
+        $scoredRooms = $rooms->map(function ($room) use ($request) {
+            $score = 0;
+
+            // Scoring based on amenities
+            $requestedAmenities = $request->get('amenities', []);
+            if (is_array($requestedAmenities)) {
+                $amenityMap = [
+                    'wifi' => 'has_wifi',
+                    'breakfast' => 'has_breakfast',
+                    'ac' => 'has_ac',
+                    'balcony' => 'has_balcony',
+                    'minibar' => 'has_minibar',
+                    'tv' => 'has_tv',
+                ];
+
+                foreach ($requestedAmenities as $amenity) {
+                    if (isset($amenityMap[$amenity]) && $room->{$amenityMap[$amenity]}) {
+                        $score += 10; // High score boost for requested amenities
+                    }
+                }
+            }
+
+            // Scoring based on view
+            if ($request->filled('view') && $room->view === $request->view) {
+                $score += 15;
+            }
+
+            // Scoring based on rating
+            if ($room->hotel && $room->hotel->rating) {
+                $score += ($room->hotel->rating * 2);
+            }
+
+            $room->recommendation_score = $score;
+            return $room;
+        });
+
+        // Sort by recommendation score and price
+        $sortedRooms = $scoredRooms->sortByDesc('recommendation_score')->values();
+
+        // Limit results to top 10 for "Smart" recommendations
+        $limitedRooms = $sortedRooms->take(10);
+
+        return $this->success([
+            'rooms' => $limitedRooms,
+            'total_found' => $sortedRooms->count()
+        ], ['Recommendations generated successfully.']);
+    }
 }

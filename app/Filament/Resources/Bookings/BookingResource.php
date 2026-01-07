@@ -28,6 +28,21 @@ class BookingResource extends Resource
 
     protected static ?string $modelLabel = 'Booking';
 
+    protected static ?int $navigationSort = 4;
+
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = parent::getEloquentQuery();
+        
+        if (auth()->user()->isHotelOwner()) {
+            return $query->whereHas('hotel', function ($q) {
+                $q->where('user_id', auth()->id());
+            });
+        }
+
+        return $query;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return BookingForm::configure($schema);

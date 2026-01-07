@@ -27,8 +27,21 @@ class RoomResource extends Resource
     protected static ?string $pluralModelLabel = 'Rooms';
     
     protected static ?string $modelLabel = 'Room';
-    
-    protected static ?int $navigationSort = 2;
+
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = parent::getEloquentQuery();
+        
+        if (auth()->user()->isHotelOwner()) {
+            return $query->whereHas('hotel', function ($q) {
+                $q->where('user_id', auth()->id());
+            });
+        }
+
+        return $query;
+    }
+
+    protected static ?int $navigationSort = 3;
 
     public static function form(Schema $schema): Schema
     {

@@ -26,6 +26,19 @@ class HotelResource extends Resource
     
     protected static ?string $modelLabel = 'Hotel';
 
+    protected static ?int $navigationSort = 2;
+
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = parent::getEloquentQuery();
+        
+        if (auth()->user()->isHotelOwner()) {
+            return $query->where('user_id', auth()->id());
+        }
+
+        return $query;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return HotelForm::configure($schema);

@@ -14,11 +14,8 @@ class AppServiceProvider extends ServiceProvider
         //
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        //
+        \App\Models\Room::observe(\App\Observers\RoomObserver::class);
     }
 }
