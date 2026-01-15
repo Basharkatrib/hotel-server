@@ -98,7 +98,7 @@ class HotelController extends Controller
                 'from' => $hotels->firstItem(),
                 'to' => $hotels->lastItem(),
             ]
-        ], ['Hotels retrieved successfully.']);
+        ], ['Hotels retrieved successfully server.']);
     }
 
     /**
