@@ -136,7 +136,7 @@ class Booking extends Model
     public function canBeCancelled(): bool
     {
         return in_array($this->status, ['pending', 'confirmed']) 
-               && $this->check_in_date->isFuture();
+               && $this->check_in_date->greaterThanOrEqualTo(today());
     }
 
     /**

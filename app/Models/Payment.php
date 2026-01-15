@@ -22,10 +22,13 @@ class Payment extends Model
         'card_last4',
         'card_brand',
         'paid_at',
+        'refunded_amount',
+        'stripe_refund_id',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'refunded_amount' => 'decimal:2',
         'paid_at' => 'datetime',
     ];
 

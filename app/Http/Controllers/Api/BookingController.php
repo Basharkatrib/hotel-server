@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class BookingController extends Controller
@@ -255,9 +256,44 @@ class BookingController extends Controller
 
         $booking->update(['status' => 'cancelled']);
 
-        // If payment exists, mark it for refund
+        // Check for refund (50% if cancelled 7+ days before check-in)
         if ($booking->payment && $booking->payment->status === 'succeeded') {
-            $booking->payment->markAsRefunded();
+            $checkInDate = Carbon::parse($booking->check_in_date);
+            $daysUntilCheckIn = now()->diffInDays($checkInDate, false);
+
+            if ($daysUntilCheckIn >= 7) {
+                // 50% Refund logic
+                $refundAmount = $booking->payment->amount * 0.5;
+                
+                try {
+                    \Stripe\Stripe::setApiKey(config('services.stripe.secret'));
+                    
+                    $refund = \Stripe\Refund::create([
+                        'payment_intent' => $booking->payment->stripe_payment_intent_id,
+                        'amount' => (int) ($refundAmount * 100), // convert to cents
+                    ]);
+
+                    $booking->payment->update([
+                        'status' => 'refunded', // Or 'partially_refunded' if you prefer
+                        'refunded_amount' => $refundAmount,
+                        'stripe_refund_id' => $refund->id,
+                    ]);
+
+                    return $this->success(
+                        ['booking' => $booking->fresh(['payment'])],
+                        ["Booking cancelled. A 50% refund ($refundAmount) has been processed because the cancellation was made $daysUntilCheckIn days before check-in."]
+                    );
+                } catch (\Exception $e) {
+                    Log::error("Refund failed for booking {$booking->id}: " . $e->getMessage());
+                    return $this->error(['Cancellation succeeded, but automatic refund failed. Our staff will process it manually.'], 500);
+                }
+            } else {
+                // No refund (less than 7 days)
+                return $this->success(
+                    ['booking' => $booking->fresh()],
+                    ['Booking cancelled. No refund is available because the cancellation was made less than 7 days before check-in.']
+                );
+            }
         }
 
         return $this->success(

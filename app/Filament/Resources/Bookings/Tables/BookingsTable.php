@@ -18,7 +18,7 @@ class BookingsTable
     {
         return $table
             ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => 
-                $query->with(['user', 'hotel', 'room'])
+                $query->with(['user', 'hotel', 'room', 'payment'])
             )
             ->columns([
                 TextColumn::make('id')
@@ -75,6 +75,14 @@ class BookingsTable
                     ->money('USD')
                     ->sortable()
                     ->alignEnd(),
+
+                TextColumn::make('payment.refunded_amount')
+                    ->label('Refunded')
+                    ->money('USD')
+                    ->sortable()
+                    ->alignEnd()
+                    ->color('danger')
+                    ->placeholder('None'),
                 
                 TextColumn::make('status')
                     ->label('Status')

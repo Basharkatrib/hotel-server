@@ -10,3 +10,7 @@ Route::get('/', function () {
 Route::get('/sanctum/csrf-cookie', function () {
     return response()->json(['message' => 'CSRF cookie set']);
 });
+
+Route::get('/financial-report/export', [App\Http\Controllers\FinancialReportController::class, 'export'])
+    ->name('financial.report.export')
+    ->middleware('auth');
