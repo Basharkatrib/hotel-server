@@ -177,7 +177,7 @@ class HotelController extends Controller
 
         return $this->success(
             ['hotel' => $hotel],
-            ['Hotel retrieved successfully.']
+            ['Hotel retrieved successfully server.']
         );
     }
 

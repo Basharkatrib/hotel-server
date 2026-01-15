@@ -1,0 +1,49 @@
+name: Deploy Laravel App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /var/www/hotel-server
+            
+            # 1. Pull latest changes
+            git fetch origin main
+            git reset --hard origin/main
+            
+            # 2. Install Dependencies
+            composer install --no-dev --optimize-autoloader
+            
+            # 3. Run Migrations
+            php artisan migrate --force
+            
+            # 4. Optimize
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            php artisan event:cache
+            
+            # 5. Fix Permissions (Important)
+            sudo chown -R www-data:www-data storage bootstrap/cache
+            sudo chmod -R 775 storage bootstrap/cache
+            
+            # 6. Restart Queue (if you use queues)
+            # php artisan queue:restart
+            
+            # 7. Reload PHP-FPM (Optional but recommended)
+            # sudo systemctl reload php8.3-fpm
