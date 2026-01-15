@@ -46,4 +46,4 @@ jobs:
             # php artisan queue:restart
             
             # 7. Reload PHP-FPM (Optional but recommended)
-            # sudo systemctl reload php8.3-fpm
+            sudo systemctl reload php8.4-fpm
