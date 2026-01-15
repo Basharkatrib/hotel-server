@@ -98,7 +98,7 @@ class HotelController extends Controller
                 'from' => $hotels->firstItem(),
                 'to' => $hotels->lastItem(),
             ]
-        ], ['Hotels retrieved successfully server.']);
+        ], ['Hotels retrieved successfully.']);
     }
 
     /**
@@ -177,7 +177,7 @@ class HotelController extends Controller
 
         return $this->success(
             ['hotel' => $hotel],
-            ['Hotel retrieved successfully server.']
+            ['Hotel retrieved successfully.']
         );
     }
 
