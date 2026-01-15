@@ -23,6 +23,7 @@ jobs:
             cd /var/www/hotel-server
             
             # 1. Pull latest changes
+            git config --global --add safe.directory /var/www/hotel-server
             git fetch origin main
             git reset --hard origin/main
             
