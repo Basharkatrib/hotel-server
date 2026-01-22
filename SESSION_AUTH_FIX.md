@@ -148,3 +148,4 @@ fetch('http://127.0.0.1:8000/api/user', {
 4. **Credentials**: يجب أن يكون `include` في جميع الـ fetch requests
 
 
+

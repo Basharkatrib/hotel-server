@@ -201,3 +201,4 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
 استخدم Middleware فقط إذا أضفت routes بسيطة تحتاج فقط للتحقق من الدور.
 
 
+

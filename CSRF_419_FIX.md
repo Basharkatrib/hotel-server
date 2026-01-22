@@ -80,3 +80,4 @@ $middleware->validateCsrfTokens(except: [
 4. **Headers**: يجب إضافة `X-Requested-With: XMLHttpRequest` في جميع requests
 
 
+
