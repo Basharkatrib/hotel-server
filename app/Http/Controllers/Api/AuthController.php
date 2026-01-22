@@ -192,11 +192,13 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        // مع session-based authentication، نحتاج فقط لحذف session
-        // Auth::logout() لا يعمل مع RequestGuard في Sanctum
+        // Clear authentication properly
+        Auth::guard('web')->logout();
+        
+        // Invalidate and regenerate session
         if ($request->hasSession()) {
-            // حذف جميع بيانات session
-            $request->session()->flush();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
         }
 
         return $this->success(null, ['Logged out successfully.']);
