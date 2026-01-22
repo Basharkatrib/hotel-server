@@ -14,6 +14,7 @@ use Stripe\Stripe;
 use Stripe\PaymentIntent;
 use Stripe\Webhook;
 use Stripe\Exception\SignatureVerificationException;
+use App\Jobs\SendBookingConfirmationEmail;
 
 class PaymentController extends Controller
 {
@@ -144,6 +145,9 @@ class PaymentController extends Controller
             // Update booking status
             $payment->booking->update(['status' => 'confirmed']);
 
+            // ⭐ إرسال Email Confirmation عبر Queue
+            SendBookingConfirmationEmail::dispatch($payment->booking, $payment);
+
             return $this->success([
                 'booking' => $payment->booking->load(['room', 'hotel']),
                 'payment' => $payment,
@@ -202,6 +206,10 @@ class PaymentController extends Controller
 
         if ($payment && $payment->status !== 'succeeded') {
             $payment->markAsPaid();
+            
+            // ⭐ إرسال Email Confirmation عبر Queue (للـ webhook)
+            SendBookingConfirmationEmail::dispatch($payment->booking, $payment);
+            
             Log::info("Payment {$payment->id} marked as paid via webhook.");
         }
     }
