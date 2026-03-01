@@ -9,6 +9,7 @@ use Illuminate\Auth\AuthenticationException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
+
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
@@ -23,12 +24,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \App\Http\Middleware\SetSameSiteNone::class,
+            \App\Http\Middleware\TrustProxies::class,
+
         ]);
 
         // Trusted Proxies على كل الـ routes
-        $middleware->global([
-            \App\Http\Middleware\TrustProxies::class,
-        ]);
+        $middleware->web(prepend: [
+        \App\Http\Middleware\TrustProxies::class,
+    ]);
         
         // Exclude API routes from CSRF verification
         $middleware->validateCsrfTokens(except: [
