@@ -17,5 +17,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         \App\Models\Room::observe(\App\Observers\RoomObserver::class);
+        if(env('APP_ENV') !== 'local') {
+        URL::forceScheme('https');
+        }
     }
 }
