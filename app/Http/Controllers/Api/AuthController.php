@@ -119,13 +119,17 @@ class AuthController extends Controller
         Auth::login($user, $request->has('remember')); // Remember me option
         
         // Regenerate session ID for security after login (only once)
-        $request->session()->regenerate();
+        if ($request->hasSession()) {
+            $request->session()->regenerate();
+            
+            // Ensure session is saved and committed
+            $request->session()->save();
+        }
         
-        // Ensure session is saved and committed
-        $request->session()->save();
-        
-        // Force session to be written immediately
-        session()->save();
+        // Force session to be written immediately (only if session exists)
+        if (session()->isStarted()) {
+            session()->save();
+        }
 
         return $this->success([
             'user' => [
