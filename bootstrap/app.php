@@ -24,14 +24,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \App\Http\Middleware\SetSameSiteNone::class,
-            \App\Http\Middleware\TrustProxies::class,
-
         ]);
 
         // Trusted Proxies على كل الـ routes
-        $middleware->web(prepend: [
-        \App\Http\Middleware\TrustProxies::class,
-    ]);
+        $middleware->trustProxies(at: '*');
+
         
         // Exclude API routes from CSRF verification
         $middleware->validateCsrfTokens(except: [
