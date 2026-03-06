@@ -74,6 +74,11 @@ return Application::configure(basePath: dirname(__DIR__))
                     }
                 }
 
+                // If debug mode is enabled and it's a 500 error, show the real error
+                if ($status === 500 && config('app.debug')) {
+                    $messages = [$e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine()];
+                }
+
                 return response()->json([
                     'status' => false,
                     'data' => null,
