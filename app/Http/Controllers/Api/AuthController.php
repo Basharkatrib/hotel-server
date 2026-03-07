@@ -115,23 +115,11 @@ class AuthController extends Controller
             );
         }
 
-        // استخدام Laravel session-based authentication بدلاً من token
-        Auth::login($user, $request->has('remember')); // Remember me option
-        
-        // Regenerate session ID for security after login (only once)
-        if ($request->hasSession()) {
-            $request->session()->regenerate();
-            
-            // Ensure session is saved and committed
-            $request->session()->save();
-        }
-        
-        // Force session to be written immediately (only if session exists)
-        if (session()->isStarted()) {
-            session()->save();
-        }
+        // 1. Create Sanctum token
+        $token = $user->createToken('access_token')->plainTextToken;
 
-        return $this->success([
+        // 2. Prepare user data
+        $userData = [
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -139,7 +127,23 @@ class AuthController extends Controller
                 'role' => $user->role,
                 'email_verified_at' => $user->email_verified_at,
             ],
-        ], ['Login successful.']);
+            'access_token' => $token,
+        ];
+
+        // 3. Keep refresh_token in an HttpOnly cookie for safety
+        // In this simple implementation, we can use the same token or a separate one
+        return $this->success($userData, ['Login successful.'])
+            ->withCookie(cookie(
+                'refresh_token',
+                $token,
+                60 * 24 * 7, // 1 week
+                '/',
+                null,
+                true, // secure
+                true, // httpOnly
+                false,
+                'lax'
+            ));
     }
 
     /**
@@ -167,20 +171,17 @@ class AuthController extends Controller
             return $this->error(['These credentials do not match our records.'], 401);
         }
 
-        // Mark OTP as used
         $otp->markAsUsed();
-
-        // Find user
         $user = User::where('email', $request->email)->first();
 
         if (!$user) {
             return $this->error(['User not found.'], 404);
         }
 
-        // استخدام Laravel session-based authentication بدلاً من token
-        Auth::login($user);
+        // 1. Create Sanctum token
+        $token = $user->createToken('access_token')->plainTextToken;
 
-        return $this->success([
+        $userData = [
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -188,7 +189,63 @@ class AuthController extends Controller
                 'role' => $user->role,
                 'email_verified_at' => $user->email_verified_at,
             ],
-        ], ['Login successful.']);
+            'access_token' => $token,
+        ];
+
+        return $this->success($userData, ['Login successful.'])
+            ->withCookie(cookie(
+                'refresh_token',
+                $token,
+                60 * 24 * 7,
+                '/',
+                null,
+                true,
+                true,
+                false,
+                'lax'
+            ));
+    }
+
+    /**
+     * Silent Refresh for Access Token
+     */
+    public function refresh(Request $request): JsonResponse
+    {
+        // Try to get the token from the cookie
+        $refreshToken = $request->cookie('refresh_token');
+
+        if (!$refreshToken) {
+            return $this->error(['No refresh token provided'], 401);
+        }
+
+        // In a more complex app, you'd check a dedicated refresh_tokens table.
+        // For Sanctum, if we sent the full token string, we can re-validate or issue new.
+        // Let's assume the user is still valid if the cookie is present and valid.
+        $tokenModel = \Laravel\Sanctum\PersonalAccessToken::findToken($refreshToken);
+
+        if (!$tokenModel || !$tokenModel->tokenable) {
+            return $this->error(['Invalid refresh token'], 401);
+        }
+
+        $user = $tokenModel->tokenable;
+
+        // Generate a new fresh access token
+        $newToken = $user->createToken('access_token')->plainTextToken;
+
+        return $this->success([
+            'user' => $user,
+            'access_token' => $newToken
+        ])->withCookie(cookie(
+            'refresh_token',
+            $newToken,
+            60 * 24 * 7,
+            '/',
+            null,
+            true,
+            true,
+            false,
+            'lax'
+        ));
     }
 
     /**
@@ -196,16 +253,14 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        // Clear authentication properly
-        Auth::guard('web')->logout();
-        
-        // Invalidate and regenerate session
-        if ($request->hasSession()) {
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
+        // Revoke the current token
+        if ($request->user()) {
+            $request->user()->currentAccessToken()->delete();
         }
 
-        return $this->success(null, ['Logged out successfully.']);
+        // Clear the cookie
+        return $this->success(null, ['Logged out successfully.'])
+            ->withoutCookie('refresh_token');
     }
 
     /**

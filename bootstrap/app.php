@@ -22,8 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Add EnsureFrontendRequestsAreStateful for Sanctum cookie-based authentication
         // This middleware enables session-based authentication for API routes
         $middleware->api(prepend: [
-            \App\Http\Middleware\SetRefererFromProxy::class,
-            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            // Using pure token-based auth now
         ]);
 
         // Trusted Proxies على كل الـ routes
