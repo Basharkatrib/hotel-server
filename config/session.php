@@ -169,7 +169,7 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE', false), // false for local development
+    'secure' => env('SESSION_SECURE_COOKIE', true), // false for local development
 
     /*
     |--------------------------------------------------------------------------
