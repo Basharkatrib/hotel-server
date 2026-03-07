@@ -23,7 +23,6 @@ return Application::configure(basePath: dirname(__DIR__))
         // This middleware enables session-based authentication for API routes
         $middleware->api(prepend: [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-            \App\Http\Middleware\SetSameSiteNone::class,
         ]);
 
         // Trusted Proxies على كل الـ routes
