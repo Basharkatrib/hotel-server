@@ -46,7 +46,7 @@ class SetSameSiteNone
                     $cookie->getExpiresTime() ?: time() + (1440 * 60), // 24 hours
                     $cookie->getPath() ?: '/',
                     $cookie->getDomain(),
-                    false, // secure - false for local development
+                    config('session.secure', true), // secure - Must be true for SameSite=None
                     $cookie->isHttpOnly(),
                     false, // raw
                     'none' // sameSite
