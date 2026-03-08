@@ -129,5 +129,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // Receipts
     Route::get('/bookings/{id}/receipt/download', [ReceiptController::class, 'download']);
     Route::get('/bookings/{id}/receipt/preview', [ReceiptController::class, 'preview']);
+Route::post('/user/fcm-token', [AuthController::class, 'updateFcmToken']);
 });
 

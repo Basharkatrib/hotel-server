@@ -41,6 +41,7 @@ class User extends Authenticatable implements FilamentUser
         'zip_code',
         'password',
         'role',
+        'fcm_token',
     ];
 
     /**
@@ -129,5 +130,13 @@ class User extends Authenticatable implements FilamentUser
     public function isRegularUser(): bool
     {
         return $this->role === 'user';
+    }
+
+    /**
+     * Route notifications for the FCM channel.
+     */
+    public function routeNotificationForFcm()
+    {
+        return $this->fcm_token;
     }
 }

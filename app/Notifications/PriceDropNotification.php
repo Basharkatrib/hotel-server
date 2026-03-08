@@ -6,6 +6,9 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\Fcm\FcmChannel;
+use NotificationChannels\Fcm\FcmMessage;
+use NotificationChannels\Fcm\Resources\Notification as FcmNotification;
 
 class PriceDropNotification extends Notification
 {
@@ -30,7 +33,14 @@ class PriceDropNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        $channels = ['database']; // Always store in DB
+
+        // Only send FCM if user has a token
+        if ($notifiable->fcm_token) {
+            $channels[] = FcmChannel::class;
+        }
+
+        return $channels;
     }
 
     /**
@@ -49,5 +59,19 @@ class PriceDropNotification extends Notification
             'image' => $this->room->images[0] ?? null,
             'message' => "Good news! The price for {$this->room->name} at {$this->room->hotel->name} has dropped from \${$this->oldPrice} to \${$this->room->price_per_night}!",
         ];
+    }
+
+    /**
+     * Get the FCM representation of the notification.
+     */
+    public function toFcm($notifiable): FcmMessage
+    {
+        return (new FcmMessage())
+            ->data([
+                'title' => 'Price Drop Alert!',
+                'body' => "The price for {$this->room->name} at {$this->room->hotel->name} has dropped to \${$this->room->price_per_night}!",
+                'room_id' => (string)$this->room->id,
+                'type' => 'price_drop',
+            ]);
     }
 }

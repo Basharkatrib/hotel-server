@@ -584,4 +584,32 @@ class AuthController extends Controller
             }
         );
     }
+
+    /**
+     * Update FCM token for push notifications
+     */
+    public function updateFcmToken(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'fcm_token' => ['required', 'string'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors()->all(), 422);
+        }
+
+        $user = $request->user();
+        $token = $request->fcm_token;
+
+        // 1. Remove this token from ANY other user to ensure uniqueness
+        User::where('fcm_token', $token)
+            ->where('id', '!=', $user->id)
+            ->update(['fcm_token' => null]);
+
+        // 2. Assign the token to the current user
+        $user->fcm_token = $token;
+        $user->save();
+
+        return $this->success(null, ['FCM token updated successfully.']);
+    }
 }
