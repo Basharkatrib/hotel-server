@@ -61,12 +61,13 @@ class PriceDropNotification extends Notification
         ];
     }
 
-    /**
-     * Get the FCM representation of the notification.
-     */
     public function toFcm($notifiable): FcmMessage
     {
         return (new FcmMessage())
+            ->notification(\NotificationChannels\Fcm\Resources\Notification::create()
+                ->setTitle('Price Drop Alert! 📉')
+                ->setBody("The price for {$this->room->name} at {$this->room->hotel->name} has dropped to \${$this->room->price_per_night}!")
+                ->setImage($this->room->images[0] ?? null))
             ->data([
                 'title' => 'Price Drop Alert!',
                 'body' => "The price for {$this->room->name} at {$this->room->hotel->name} has dropped to \${$this->room->price_per_night}!",
