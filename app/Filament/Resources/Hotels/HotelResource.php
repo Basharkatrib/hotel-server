@@ -27,6 +27,11 @@ class HotelResource extends Resource
     protected static ?string $modelLabel = 'Hotel';
 
     protected static ?int $navigationSort = 2;
+    
+    public static function canCreate(): bool
+    {
+        return !auth()->user()->isHotelOwner();
+    }
 
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
     {

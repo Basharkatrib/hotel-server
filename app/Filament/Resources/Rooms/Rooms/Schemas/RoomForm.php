@@ -22,7 +22,12 @@ class RoomForm
                 ->schema([
                     Select::make('hotel_id')
                         ->label('Hotel')
-                        ->relationship('hotel', 'name')
+                        ->relationship('hotel', 'name', modifyQueryUsing: function ($query) {
+                            if (auth()->user()->isHotelOwner()) {
+                                return $query->where('user_id', auth()->id());
+                            }
+                            return $query;
+                        })
                         ->required()
                         ->searchable()
                         ->preload()
