@@ -146,7 +146,7 @@ class PaymentController extends Controller
             $payment->booking->update(['status' => 'confirmed']);
 
             // ⭐ إرسال Email Confirmation عبر Queue
-            SendBookingConfirmationEmail::dispatch($payment->booking, $payment);
+            // SendBookingConfirmationEmail::dispatch($payment->booking, $payment);
 
             return $this->success([
                 'booking' => $payment->booking->load(['room', 'hotel']),
@@ -208,7 +208,7 @@ class PaymentController extends Controller
             $payment->markAsPaid();
             
             // ⭐ إرسال Email Confirmation عبر Queue (للـ webhook)
-            SendBookingConfirmationEmail::dispatch($payment->booking, $payment);
+            // SendBookingConfirmationEmail::dispatch($payment->booking, $payment);
             
             Log::info("Payment {$payment->id} marked as paid via webhook.");
         }
