@@ -23,6 +23,14 @@ class HotelController extends Controller
     {
         $query = Hotel::query();
 
+        // Check if user is favorited
+        if ($request->user()) {
+            $userId = $request->user()->id;
+            $query->withExists(['favorites as is_favorited' => function ($q) use ($userId) {
+                $q->where('user_id', $userId);
+            }]);
+        }
+
         // If user is hotel owner, show only their hotels
         if ($request->user() && $request->user()->isHotelOwner()) {
             $query->where('user_id', $request->user()->id);
@@ -169,7 +177,16 @@ class HotelController extends Controller
      */
     public function show(string $slug): JsonResponse
     {
-        $hotel = Hotel::where('slug', $slug)->first();
+        $query = Hotel::where('slug', $slug);
+
+        if (request()->user()) {
+            $userId = request()->user()->id;
+            $query->withExists(['favorites as is_favorited' => function ($q) use ($userId) {
+                $q->where('user_id', $userId);
+            }]);
+        }
+
+        $hotel = $query->first();
 
         if (!$hotel) {
             return $this->error(['Hotel not found.'], 404);

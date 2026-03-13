@@ -22,6 +22,13 @@ class RoomController extends Controller
     {
         $query = Room::with('hotel:id,name,city,address');
 
+        if ($request->user()) {
+            $userId = $request->user()->id;
+            $query->withExists(['favorites as is_favorited' => function ($q) use ($userId) {
+                $q->where('user_id', $userId);
+            }]);
+        }
+
         // If user is hotel owner, show only rooms from their hotels
         if ($request->user() && $request->user()->isHotelOwner()) {
             $query->whereHas('hotel', function ($q) use ($request) {
@@ -260,7 +267,16 @@ class RoomController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $room = Room::with('hotel')->find($id);
+        $query = Room::with('hotel');
+
+        if (request()->user()) {
+            $userId = request()->user()->id;
+            $query->withExists(['favorites as is_favorited' => function ($q) use ($userId) {
+                $q->where('user_id', $userId);
+            }]);
+        }
+
+        $room = $query->find($id);
 
         if (!$room) {
             return $this->error(['Room not found.'], 404);
