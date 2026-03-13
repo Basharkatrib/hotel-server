@@ -17,9 +17,13 @@ class ReceiptController extends Controller
     {
         // Support token in query string for download windows
         if (!$request->user() && $request->has('token')) {
+            \Illuminate\Support\Facades\Log::info('ReceiptController: Token received in request: ' . $request->token);
             $token = \Laravel\Sanctum\PersonalAccessToken::findToken($request->token);
             if ($token && $token->tokenable) {
+                \Illuminate\Support\Facades\Log::info('ReceiptController: Valid token found for user ID: ' . $token->tokenable->id);
                 auth()->login($token->tokenable);
+            } else {
+                \Illuminate\Support\Facades\Log::warning('ReceiptController: Invalid token provided.');
             }
         }
 
@@ -34,9 +38,19 @@ class ReceiptController extends Controller
             abort(403, 'You do not have permission to view this receipt.');
         }
 
-        $pdf = Pdf::loadView('receipts.booking', compact('booking'));
-        
-        return $pdf->download("receipt-booking-{$booking->id}.pdf");
+        try {
+            $pdf = Pdf::loadView('receipts.booking', compact('booking'));
+            return $pdf->download("receipt-booking-{$booking->id}.pdf");
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('ReceiptController: PDF generation failed: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error($e->getTraceAsString());
+            return response()->json([
+                'status' => false,
+                'data' => null,
+                'messages' => ['PDF generation failed: ' . $e->getMessage()],
+                'code' => 500
+            ], 500);
+        }
     }
     
     /**

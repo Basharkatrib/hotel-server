@@ -126,9 +126,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::put('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 
-    // Receipts
-    Route::get('/bookings/{id}/receipt/download', [ReceiptController::class, 'download']);
-    Route::get('/bookings/{id}/receipt/preview', [ReceiptController::class, 'preview']);
-Route::post('/user/fcm-token', [AuthController::class, 'updateFcmToken']);
+    Route::post('/user/fcm-token', [AuthController::class, 'updateFcmToken']);
 });
+
+// Receipts (Public but protected manually in controller via token)
+Route::get('/bookings/{id}/receipt/download', [ReceiptController::class, 'download']);
+Route::get('/bookings/{id}/receipt/preview', [ReceiptController::class, 'preview']);
 
