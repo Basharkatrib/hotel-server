@@ -22,8 +22,9 @@ class RoomController extends Controller
     {
         $query = Room::with('hotel:id,name,city,address');
 
-        if ($request->user()) {
-            $userId = $request->user()->id;
+        $user = auth('sanctum')->user();
+        if ($user) {
+            $userId = $user->id;
             $query->withExists(['favorites as is_favorited' => function ($q) use ($userId) {
                 $q->where('user_id', $userId);
             }]);
@@ -269,8 +270,9 @@ class RoomController extends Controller
     {
         $query = Room::with('hotel');
 
-        if (request()->user()) {
-            $userId = request()->user()->id;
+        $user = auth('sanctum')->user();
+        if ($user) {
+            $userId = $user->id;
             $query->withExists(['favorites as is_favorited' => function ($q) use ($userId) {
                 $q->where('user_id', $userId);
             }]);

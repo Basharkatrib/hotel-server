@@ -24,8 +24,9 @@ class HotelController extends Controller
         $query = Hotel::query();
 
         // Check if user is favorited
-        if ($request->user()) {
-            $userId = $request->user()->id;
+        $user = auth('sanctum')->user();
+        if ($user) {
+            $userId = $user->id;
             $query->withExists(['favorites as is_favorited' => function ($q) use ($userId) {
                 $q->where('user_id', $userId);
             }]);
@@ -179,8 +180,9 @@ class HotelController extends Controller
     {
         $query = Hotel::where('slug', $slug);
 
-        if (request()->user()) {
-            $userId = request()->user()->id;
+        $user = auth('sanctum')->user();
+        if ($user) {
+            $userId = $user->id;
             $query->withExists(['favorites as is_favorited' => function ($q) use ($userId) {
                 $q->where('user_id', $userId);
             }]);
