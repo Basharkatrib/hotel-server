@@ -12,8 +12,8 @@ class BookingPolicy
      */
     public function viewAny(User $user): bool
     {
-        // All authenticated users can view bookings (filtered by role in controller)
-        return true;
+        return $user->isAdmin() || $user->isHotelOwner() || 
+               ($user->isHotelStaff() && $user->hotelStaff()->whereHas('permissions', fn($q) => $q->where('name', 'manage_bookings'))->exists());
     }
 
     /**
@@ -28,6 +28,11 @@ class BookingPolicy
 
         // Hotel owner can view bookings for their hotels
         if ($user->isHotelOwner() && $booking->isOwnedByHotelOwner($user->id)) {
+            return true;
+        }
+
+        // Hotel staff can view bookings for their hotel if they have permission
+        if ($user->isHotelStaff() && $user->hasStaffPermission('manage_bookings', $booking->hotel_id)) {
             return true;
         }
 
@@ -49,8 +54,17 @@ class BookingPolicy
      */
     public function update(User $user, Booking $booking): bool
     {
-        // Only admin can update bookings
-        return $user->isAdmin();
+        if ($user->isAdmin()) return true;
+
+        if ($user->isHotelOwner() && $booking->isOwnedByHotelOwner($user->id)) {
+            return true;
+        }
+
+        if ($user->isHotelStaff()) {
+            return $user->hasStaffPermission('manage_bookings', $booking->hotel_id);
+        }
+
+        return false;
     }
 
     /**

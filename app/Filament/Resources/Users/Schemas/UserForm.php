@@ -29,6 +29,7 @@ class UserForm
                     ->options([
                         'admin' => 'Admin',
                         'hotel_owner' => 'Hotel Owner',
+                        'hotel_staff' => 'Hotel Staff',
                         'user' => 'Regular User',
                     ])
                     ->required()

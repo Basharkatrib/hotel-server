@@ -28,14 +28,32 @@ class RoomResource extends Resource
     
     protected static ?string $modelLabel = 'Room';
 
+    public static function canViewAny(): bool
+    {
+        $user = auth()->user();
+        if ($user->isAdmin() || $user->isHotelOwner()) return true;
+
+        if ($user->isHotelStaff()) {
+            return $user->hotelStaff()->whereHas('permissions', fn($q) => $q->where('name', 'manage_rooms'))->exists();
+        }
+
+        return false;
+    }
+
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
     {
         $query = parent::getEloquentQuery();
+        $user = auth()->user();
         
-        if (auth()->user()->isHotelOwner()) {
-            return $query->whereHas('hotel', function ($q) {
-                $q->where('user_id', auth()->id());
+        if ($user->isHotelOwner()) {
+            return $query->whereHas('hotel', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
             });
+        }
+
+        if ($user->isHotelStaff()) {
+            $hotelIds = $user->hotelStaff()->pluck('hotel_id');
+            return $query->whereIn('hotel_id', $hotelIds);
         }
 
         return $query;

@@ -31,7 +31,7 @@ class HotelPolicy
     public function create(User $user): bool
     {
         // Admin or hotel owner can create hotels
-        return $user->isAdmin() || $user->isHotelOwner();
+        return $user->isAdmin();
     }
 
     /**
@@ -39,8 +39,17 @@ class HotelPolicy
      */
     public function update(User $user, Hotel $hotel): bool
     {
-        // Admin can update any hotel, hotel owner can update only their hotels
-        return $user->isAdmin() || ($user->isHotelOwner() && $hotel->isOwnedBy($user->id));
+        if ($user->isAdmin()) return true;
+
+        if ($user->isHotelOwner() && $hotel->isOwnedBy($user->id)) {
+            return true;
+        }
+
+        if ($user->isHotelStaff()) {
+            return $user->hasStaffPermission('manage_hotel_info', $hotel->id);
+        }
+
+        return false;
     }
 
     /**

@@ -28,17 +28,35 @@ class HotelResource extends Resource
 
     protected static ?int $navigationSort = 2;
     
+    public static function canViewAny(): bool
+    {
+        $user = auth()->user();
+        if ($user->isAdmin() || $user->isHotelOwner()) return true;
+
+        if ($user->isHotelStaff()) {
+            return $user->hotelStaff()->whereHas('permissions', fn($q) => $q->where('name', 'manage_hotel_info'))->exists();
+        }
+
+        return false;
+    }
+
     public static function canCreate(): bool
     {
-        return !auth()->user()->isHotelOwner();
+        return auth()->user()->isAdmin();
     }
 
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
     {
         $query = parent::getEloquentQuery();
+        $user = auth()->user();
         
-        if (auth()->user()->isHotelOwner()) {
-            return $query->where('user_id', auth()->id());
+        if ($user->isHotelOwner()) {
+            return $query->where('user_id', $user->id);
+        }
+
+        if ($user->isHotelStaff()) {
+            $hotelIds = $user->hotelStaff()->pluck('hotel_id');
+            return $query->whereIn('id', $hotelIds);
         }
 
         return $query;

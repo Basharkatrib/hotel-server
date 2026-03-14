@@ -12,7 +12,6 @@ class RoomPolicy
      */
     public function viewAny(User $user): bool
     {
-        // Everyone can view rooms
         return true;
     }
 
@@ -30,8 +29,19 @@ class RoomPolicy
      */
     public function create(User $user): bool
     {
-        // Admin and hotel owner can create rooms
-        return $user->isAdmin() || $user->isHotelOwner();
+        // Admin, hotel owner and authorized staff can create rooms
+        if ($user->isAdmin() || $user->isHotelOwner()) {
+            return true;
+        }
+
+        if ($user->isHotelStaff()) {
+            // Since create doesn't have a room instance, we check if they have manage_rooms permission 
+            // at least for one hotel they are assigned to. 
+            // Filament will filter the hotel list in the form.
+            return $user->hotelStaff()->whereHas('permissions', fn($q) => $q->where('name', 'manage_rooms'))->exists();
+        }
+
+        return false;
     }
 
     /**
@@ -39,8 +49,17 @@ class RoomPolicy
      */
     public function update(User $user, Room $room): bool
     {
-        // Admin can update any room, hotel owner can update only rooms in their hotels
-        return $user->isAdmin() || ($user->isHotelOwner() && $room->isOwnedBy($user->id));
+        if ($user->isAdmin()) return true;
+
+        if ($user->isHotelOwner() && $room->isOwnedBy($user->id)) {
+            return true;
+        }
+
+        if ($user->isHotelStaff()) {
+            return $user->hasStaffPermission('manage_rooms', $room->hotel_id);
+        }
+
+        return false;
     }
 
     /**
@@ -48,8 +67,17 @@ class RoomPolicy
      */
     public function delete(User $user, Room $room): bool
     {
-        // Admin can delete any room, hotel owner can delete only rooms in their hotels
-        return $user->isAdmin() || ($user->isHotelOwner() && $room->isOwnedBy($user->id));
+        if ($user->isAdmin()) return true;
+
+        if ($user->isHotelOwner() && $room->isOwnedBy($user->id)) {
+            return true;
+        }
+
+        if ($user->isHotelStaff()) {
+            return $user->hasStaffPermission('manage_rooms', $room->hotel_id);
+        }
+
+        return false;
     }
 }
 

@@ -19,7 +19,7 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->isAdmin() || $this->isHotelOwner();
+        return $this->isAdmin() || $this->isHotelOwner() || $this->isHotelStaff();
     }
 
     /**
@@ -100,12 +100,17 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(Review::class);
     }
 
-    /**
-     * Get the hotels owned by this user.
-     */
     public function hotels(): HasMany
     {
         return $this->hasMany(Hotel::class);
+    }
+
+    /**
+     * Get the staff profile for this user.
+     */
+    public function hotelStaff(): HasMany
+    {
+        return $this->hasMany(HotelStaff::class);
     }
 
     /**
@@ -130,6 +135,34 @@ class User extends Authenticatable implements FilamentUser
     public function isRegularUser(): bool
     {
         return $this->role === 'user';
+    }
+
+    /**
+     * Check if user is hotel staff.
+     */
+    public function isHotelStaff(): bool
+    {
+        return $this->role === 'hotel_staff';
+    }
+
+    /**
+     * Check if user has specific permission for a hotel.
+     */
+    public function hasStaffPermission(string $permission, int $hotelId): bool
+    {
+        if ($this->isAdmin()) return true;
+        
+        if ($this->isHotelOwner()) {
+            return $this->hotels()->where('id', $hotelId)->exists();
+        }
+
+        return $this->hotelStaff()
+            ->where('hotel_id', $hotelId)
+            ->where('is_active', true)
+            ->whereHas('permissions', function ($query) use ($permission) {
+                $query->where('name', $permission);
+            })
+            ->exists();
     }
 
     /**
