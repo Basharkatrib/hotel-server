@@ -52,16 +52,11 @@ class HotelResource extends Resource
         $query = parent::getEloquentQuery();
         $user = auth()->user();
         
-        if ($user->isHotelOwner()) {
-            return $query->where('user_id', $user->id);
+        if ($user->isAdmin()) {
+            return $query;
         }
 
-        if ($user->isHotelStaff()) {
-            $hotelIds = $user->hotelStaff()->pluck('hotel_id');
-            return $query->whereIn('id', $hotelIds);
-        }
-
-        return $query;
+        return $query->whereIn('id', $user->getHotelIds());
     }
 
     public static function form(Schema $schema): Schema

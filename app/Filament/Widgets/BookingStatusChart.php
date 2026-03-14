@@ -4,10 +4,14 @@ namespace App\Filament\Widgets;
 
 use App\Models\Booking;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Facades\Cache;
 
 class BookingStatusChart extends ChartWidget
 {
-    protected static ?int $sort = 4;
+    protected static bool $isLazy = true;
+    protected static ?int $sort = 3;
+
+    protected ?string $pollingInterval = null;
 
     public function getHeading(): string
     {
@@ -17,42 +21,50 @@ class BookingStatusChart extends ChartWidget
     protected function getData(): array
     {
         $user = auth()->user();
-        $query = Booking::query();
+        $hotelIds = $user->getHotelIds();
+        $cacheKey = 'booking_status_chart_' . $user->id;
 
-        if ($user->isHotelOwner()) {
-            $query->whereHas('hotel', fn ($q) => $q->where('user_id', $user->id));
-        } elseif ($user->isHotelStaff()) {
-            $query->whereIn('hotel_id', $user->hotelStaff()->pluck('hotel_id'));
-        }
+        return Cache::remember($cacheKey, 120, function () use ($user, $hotelIds) {
+            $query = Booking::query();
 
-        $statuses = ['pending', 'confirmed', 'completed', 'cancelled'];
-        $data = [];
-        $labels = [];
-        $colors = [
-            'pending' => '#f59e0b', // Amber
-            'confirmed' => '#3b82f6', // Blue
-            'completed' => '#10b981', // Emerald
-            'cancelled' => '#ef4444', // Red
-        ];
-        $bgColors = [];
+            if (!$user->isAdmin()) {
+                $query->whereIn('hotel_id', $hotelIds);
+            }
 
-        foreach ($statuses as $status) {
-            $count = (clone $query)->where('status', $status)->count();
-            $data[] = $count;
-            $labels[] = ucfirst($status);
-            $bgColors[] = $colors[$status];
-        }
+            $statusCounts = $query
+                ->selectRaw('status, COUNT(*) as count')
+                ->groupBy('status')
+                ->pluck('count', 'status')
+                ->toArray();
 
-        return [
-            'datasets' => [
-                [
-                    'label' => 'Bookings',
-                    'data' => $data,
-                    'backgroundColor' => $bgColors,
+            $statuses = ['pending', 'confirmed', 'completed', 'cancelled'];
+            $data = [];
+            $labels = [];
+            $colors = [
+                'pending' => '#f59e0b',
+                'confirmed' => '#3b82f6',
+                'completed' => '#10b981',
+                'cancelled' => '#ef4444',
+            ];
+            $bgColors = [];
+
+            foreach ($statuses as $status) {
+                $data[] = $statusCounts[$status] ?? 0;
+                $labels[] = ucfirst($status);
+                $bgColors[] = $colors[$status];
+            }
+
+            return [
+                'datasets' => [
+                    [
+                        'label' => 'Bookings',
+                        'data' => $data,
+                        'backgroundColor' => $bgColors,
+                    ],
                 ],
-            ],
-            'labels' => $labels,
-        ];
+                'labels' => $labels,
+            ];
+        });
     }
 
     protected function getType(): string

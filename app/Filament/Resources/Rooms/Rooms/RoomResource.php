@@ -30,6 +30,8 @@ class RoomResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Hotel Management';
 
+    protected static ?int $navigationSort = 3;
+
     public static function canViewAny(): bool
     {
         $user = auth()->user();
@@ -47,21 +49,14 @@ class RoomResource extends Resource
         $query = parent::getEloquentQuery();
         $user = auth()->user();
         
-        if ($user->isHotelOwner()) {
-            return $query->whereHas('hotel', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
-            });
+        if ($user->isAdmin()) {
+            return $query;
         }
 
-        if ($user->isHotelStaff()) {
-            $hotelIds = $user->hotelStaff()->pluck('hotel_id');
-            return $query->whereIn('hotel_id', $hotelIds);
-        }
-
-        return $query;
+        return $query->whereIn('hotel_id', $user->getHotelIds());
     }
 
-    protected static ?int $navigationSort = 3;
+
 
     public static function form(Schema $schema): Schema
     {

@@ -4,11 +4,13 @@ namespace App\Filament\Widgets;
 
 use App\Models\Booking;
 use Filament\Widgets\ChartWidget;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class RevenueTrend extends ChartWidget
 {
-    protected static ?int $sort = 3;
+    protected static bool $isLazy = true;
+    protected static ?int $sort = 4;
+    protected ?string $pollingInterval = null;
 
     public function getHeading(): string
     {
@@ -18,39 +20,46 @@ class RevenueTrend extends ChartWidget
     protected function getData(): array
     {
         $user = auth()->user();
-        $query = Booking::query()->whereIn('status', ['confirmed', 'completed', 'pending']);
+        $hotelIds = $user->getHotelIds();
+        $cacheKey = 'revenue_trend_' . $user->id;
 
-        if ($user->isHotelOwner()) {
-            $query->whereHas('hotel', fn ($q) => $q->where('user_id', $user->id));
-        } elseif ($user->isHotelStaff()) {
-            $query->whereIn('hotel_id', $user->hotelStaff()->pluck('hotel_id'));
-        }
+        return Cache::remember($cacheKey, 120, function () use ($user, $hotelIds) {
+            $query = Booking::query()
+                ->whereIn('status', ['confirmed', 'completed', 'pending'])
+                ->whereYear('created_at', now()->year);
 
-        $data = [];
-        $labels = [];
+            if (!$user->isAdmin()) {
+                $query->whereIn('hotel_id', $hotelIds);
+            }
 
-        for ($i = 1; $i <= 12; $i++) {
-            $month = now()->month($i)->format('M');
-            $revenue = (clone $query)->whereMonth('created_at', $i)
-                ->whereYear('created_at', now()->year)
-                ->sum('total_amount');
-            
-            $data[] = (float) $revenue;
-            $labels[] = $month;
-        }
+            $monthlyRevenue = $query
+                ->selectRaw('MONTH(created_at) as month, SUM(total_amount) as revenue')
+                ->groupBy('month')
+                ->orderBy('month')
+                ->pluck('revenue', 'month')
+                ->toArray();
 
-        return [
-            'datasets' => [
-                [
-                    'label' => 'Revenue ($)',
-                    'data' => $data,
-                    'borderColor' => '#10b981', // Emerald/Green
-                    'backgroundColor' => 'rgba(16, 185, 129, 0.1)',
-                    'fill' => 'start',
+            $data = [];
+            $labels = [];
+
+            for ($i = 1; $i <= 12; $i++) {
+                $data[] = (float) ($monthlyRevenue[$i] ?? 0);
+                $labels[] = now()->month($i)->format('M');
+            }
+
+            return [
+                'datasets' => [
+                    [
+                        'label' => 'Revenue ($)',
+                        'data' => $data,
+                        'borderColor' => '#10b981',
+                        'backgroundColor' => 'rgba(16, 185, 129, 0.1)',
+                        'fill' => 'start',
+                    ],
                 ],
-            ],
-            'labels' => $labels,
-        ];
+                'labels' => $labels,
+            ];
+        });
     }
 
     protected function getType(): string

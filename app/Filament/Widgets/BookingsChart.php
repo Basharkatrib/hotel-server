@@ -4,54 +4,61 @@ namespace App\Filament\Widgets;
 
 use App\Models\Booking;
 use Filament\Widgets\ChartWidget;
-use Flowframe\Trend\Trend;
-use Flowframe\Trend\TrendValue;
+use Illuminate\Support\Facades\Cache;
 
 class BookingsChart extends ChartWidget
 {
+    protected static bool $isLazy = true;
+    protected static ?int $sort = 5;
+    protected ?string $pollingInterval = null;
+
     public function getHeading(): string
     {
         return 'Monthly Bookings';
     }
 
-    protected static ?int $sort = 2;
-
     protected function getData(): array
     {
         $user = auth()->user();
-        $query = Booking::query();
+        $hotelIds = $user->getHotelIds();
+        $cacheKey = 'bookings_chart_' . $user->id;
 
-        if ($user->isHotelOwner()) {
-            $query->whereHas('hotel', fn ($q) => $q->where('user_id', $user->id));
-        } elseif ($user->isHotelStaff()) {
-            $query->whereIn('hotel_id', $user->hotelStaff()->pluck('hotel_id'));
-        }
+        return Cache::remember($cacheKey, 120, function () use ($user, $hotelIds) {
+            $query = Booking::query()
+                ->whereYear('created_at', now()->year);
 
-        // Fallback manually if Trend package is not installed
-        // But assuming standard Filament chart logic:
-        $data = [];
-        $labels = [];
+            if (!$user->isAdmin()) {
+                $query->whereIn('hotel_id', $hotelIds);
+            }
 
-        for ($i = 1; $i <= 12; $i++) {
-            $month = now()->month($i)->format('M');
-            $count = (clone $query)->whereMonth('created_at', $i)->whereYear('created_at', now()->year)->count();
-            
-            $data[] = $count;
-            $labels[] = $month;
-        }
+            $monthlyData = $query
+                ->selectRaw('MONTH(created_at) as month, COUNT(*) as count')
+                ->groupBy('month')
+                ->orderBy('month')
+                ->pluck('count', 'month')
+                ->toArray();
 
-        return [
-            'datasets' => [
-                [
-                    'label' => 'Bookings',
-                    'data' => $data,
-                    'fill' => 'start',
-                    'borderColor' => '#3b82f6', // Blue color
-                    'backgroundColor' => 'rgba(59, 130, 246, 0.1)',
+            $data = [];
+            $labels = [];
+
+            for ($i = 1; $i <= 12; $i++) {
+                $data[] = $monthlyData[$i] ?? 0;
+                $labels[] = now()->month($i)->format('M');
+            }
+
+            return [
+                'datasets' => [
+                    [
+                        'label' => 'Bookings',
+                        'data' => $data,
+                        'fill' => 'start',
+                        'borderColor' => '#3b82f6',
+                        'backgroundColor' => 'rgba(59, 130, 246, 0.1)',
+                    ],
                 ],
-            ],
-            'labels' => $labels,
-        ];
+                'labels' => $labels,
+            ];
+        });
     }
 
     protected function getType(): string

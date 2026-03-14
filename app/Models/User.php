@@ -146,6 +146,23 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
+     * Get all hotel IDs accessible by this user (cached in memory per request).
+     */
+    public function getHotelIds(): array
+    {
+        if (!isset($this->cachedHotelIds)) {
+            if ($this->isHotelOwner()) {
+                $this->cachedHotelIds = $this->hotels()->pluck('id')->toArray();
+            } elseif ($this->isHotelStaff()) {
+                $this->cachedHotelIds = $this->hotelStaff()->pluck('hotel_id')->toArray();
+            } else {
+                $this->cachedHotelIds = [];
+            }
+        }
+        return $this->cachedHotelIds;
+    }
+
+    /**
      * Check if user has specific permission for a hotel.
      */
     public function hasStaffPermission(string $permission, int $hotelId): bool
