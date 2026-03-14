@@ -23,6 +23,8 @@ class BookingsChart extends ChartWidget
 
         if ($user->isHotelOwner()) {
             $query->whereHas('hotel', fn ($q) => $q->where('user_id', $user->id));
+        } elseif ($user->isHotelStaff()) {
+            $query->whereIn('hotel_id', $user->hotelStaff()->pluck('hotel_id'));
         }
 
         // Fallback manually if Trend package is not installed

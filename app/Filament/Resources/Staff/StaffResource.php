@@ -21,7 +21,7 @@ class StaffResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'User Management';
+    protected static string|\UnitEnum|null $navigationGroup = 'Staff Management';
 
     protected static ?int $navigationSort = 3;
 

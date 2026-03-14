@@ -28,6 +28,8 @@ class RoomResource extends Resource
     
     protected static ?string $modelLabel = 'Room';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Hotel Management';
+
     public static function canViewAny(): bool
     {
         $user = auth()->user();

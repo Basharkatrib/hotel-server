@@ -27,6 +27,8 @@ class StatsOverview extends BaseWidget
         $hotelsQuery = Hotel::query();
         if ($user->isHotelOwner()) {
             $hotelsQuery->where('user_id', $user->id);
+        } elseif ($user->isHotelStaff()) {
+            $hotelsQuery->whereIn('id', $user->hotelStaff()->pluck('hotel_id'));
         }
         $stats[] = Stat::make('Total Hotels', $hotelsQuery->count())
             ->description('Active hotels in system')
@@ -37,6 +39,8 @@ class StatsOverview extends BaseWidget
         $bookingsQuery = Booking::query();
         if ($user->isHotelOwner()) {
             $bookingsQuery->whereHas('hotel', fn ($query) => $query->where('user_id', $user->id));
+        } elseif ($user->isHotelStaff()) {
+            $bookingsQuery->whereIn('hotel_id', $user->hotelStaff()->pluck('hotel_id'));
         }
         $stats[] = Stat::make('Total Bookings', $bookingsQuery->count())
             ->description('Total bookings made')
@@ -47,6 +51,8 @@ class StatsOverview extends BaseWidget
         $revenueQuery = Booking::query()->whereIn('status', ['confirmed', 'completed', 'pending']);
         if ($user->isHotelOwner()) {
             $revenueQuery->whereHas('hotel', fn ($query) => $query->where('user_id', $user->id));
+        } elseif ($user->isHotelStaff()) {
+            $revenueQuery->whereIn('hotel_id', $user->hotelStaff()->pluck('hotel_id'));
         }
         $revenue = $revenueQuery->sum('total_amount');
         

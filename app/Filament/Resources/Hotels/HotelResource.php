@@ -26,6 +26,8 @@ class HotelResource extends Resource
     
     protected static ?string $modelLabel = 'Hotel';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Hotel Management';
+
     protected static ?int $navigationSort = 2;
     
     public static function canViewAny(): bool

@@ -20,13 +20,27 @@ class StaffForm
             Section::make('Staff Information')
                 ->columns(2)
                 ->schema([
-                    Select::make('user_id')
-                        ->label('User')
-                        ->relationship('user', 'name')
-                        ->searchable()
-                        ->preload()
+                    TextInput::make('staff_name')
+                        ->label('Staff Name')
                         ->required()
-                        ->helperText('Select the user account for this staff member.'),
+                        ->maxLength(255)
+                        ->placeholder('Full Name'),
+
+                    TextInput::make('staff_email')
+                        ->label('Staff Email')
+                        ->email()
+                        ->required()
+                        ->unique('users', 'email', ignoreRecord: true, modifyRuleUsing: function ($rule, $record) {
+                            return $record ? $rule->ignore($record->user_id) : $rule;
+                        })
+                        ->placeholder('email@example.com'),
+
+                    TextInput::make('staff_password')
+                        ->label('Password')
+                        ->password()
+                        ->required(fn (string $operation): bool => $operation === 'create')
+                        ->dehydrated(fn ($state) => filled($state))
+                        ->placeholder('Password'),
 
                     Select::make('hotel_id')
                         ->label('Hotel')

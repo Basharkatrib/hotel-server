@@ -28,6 +28,8 @@ class BookingResource extends Resource
 
     protected static ?string $modelLabel = 'Booking';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Hotel Management';
+
     protected static ?int $navigationSort = 4;
 
     public static function canViewAny(): bool
