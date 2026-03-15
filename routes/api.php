@@ -127,6 +127,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 
     Route::post('/user/fcm-token', [AuthController::class, 'updateFcmToken']);
+
+    // Face Recognition (Standalone App)
+    Route::get('/owner/hotels', [\App\Http\Controllers\Api\FaceVerificationController::class, 'getOwnerHotels']);
+    Route::post('/bookings/{booking}/register-face', [\App\Http\Controllers\Api\FaceVerificationController::class, 'registerFace']);
+    Route::post('/face/verify', [\App\Http\Controllers\Api\FaceVerificationController::class, 'verifyFace']);
+    Route::get('/owner/hotels/{hotel}/bookings', [\App\Http\Controllers\Api\FaceVerificationController::class, 'getHotelBookings']);
 });
 
 // Receipts (Public but protected manually in controller via token)

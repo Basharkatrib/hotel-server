@@ -20,6 +20,7 @@ return [
         'http://localhost:4173',
         'http://127.0.0.1:4173',
         'https://bookinghotelsinfo.netlify.app',
+        'https://vayka-api-reco.netlify.app',
     ],
 
     'allowed_origins_patterns' => [],

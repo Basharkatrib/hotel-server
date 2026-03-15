@@ -50,7 +50,7 @@ class AdminUserSeeder extends Seeder
         }
 
         // 3. Regular User
-        $user = User::firstOrCreate(
+        $user1 = User::firstOrCreate(
             ['email' => 'user@gmail.com'],
             [
                 'name' => 'Regular User',
@@ -60,7 +60,45 @@ class AdminUserSeeder extends Seeder
             ]
         );
 
-        if ($user->wasRecentlyCreated) {
+         $user2 = User::firstOrCreate(
+            ['email' => 'jessy@gmail.com'],
+            [
+                'name' => 'Jessy',
+                'password' => Hash::make('User123'),
+                'role' => 'user',
+                'email_verified_at' => now(),
+            ]
+        );
+
+         $user3 = User::firstOrCreate(
+            ['email' => 'meray@gmail.com'],
+            [
+                'name' => 'Meray',
+                'password' => Hash::make('User123'),
+                'role' => 'user',
+                'email_verified_at' => now(),
+            ]
+        );
+
+
+
+        if ($user1->wasRecentlyCreated) {
+            $this->command->info('✅ Regular User created successfully!');
+            $this->command->info('📧 Email: user@gmail.com');
+            $this->command->info('🔑 Password: User123');
+        } else {
+            $this->command->warn('Regular User already exists.');
+        }
+
+         if ($user2->wasRecentlyCreated) {
+            $this->command->info('✅ Regular User created successfully!');
+            $this->command->info('📧 Email: user@gmail.com');
+            $this->command->info('🔑 Password: User123');
+        } else {
+            $this->command->warn('Regular User already exists.');
+        }
+
+         if ($user3->wasRecentlyCreated) {
             $this->command->info('✅ Regular User created successfully!');
             $this->command->info('📧 Email: user@gmail.com');
             $this->command->info('🔑 Password: User123');
