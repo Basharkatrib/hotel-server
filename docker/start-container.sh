@@ -37,7 +37,7 @@ ls -la /app/public/fonts/filament 2>/dev/null || echo "Filament Fonts directory 
 
 # Now cache config
 php artisan config:cache
-# php artisan route:cache
+php artisan route:cache
 php artisan view:cache
 php artisan event:cache
 # Uncomment if you want automatic schema updates on deploy

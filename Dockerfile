@@ -88,6 +88,7 @@ RUN set -eux; \
     rm -rf /var/cache/apk/*
 
 # Configure php-fpm for production a bit (opcache)
+COPY docker/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
 COPY --chown=www-data:www-data . /app
 
 # Bring in vendor and built assets from previous stages
