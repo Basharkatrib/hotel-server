@@ -1,0 +1,37 @@
+server {
+	listen ${PORT} default_server;
+	server_name _;
+	root /app/public;
+
+	index index.php index.html;
+
+	# Serve static files first (CSS, JS, images, fonts) - must come before PHP handler
+	# This ensures Filament assets (css/filament, js/filament, fonts/filament) are served as static files
+	location ~* \.(?:css|js|jpg|jpeg|gif|png|svg|ico|woff|woff2|ttf|eot)$ {
+		try_files $uri =404;
+		expires 7d;
+		add_header Cache-Control "public, immutable";
+		access_log off;
+	}
+
+	# Ensure Livewire endpoints & assets are handled by Laravel, not static
+	location ^~ /livewire/ {
+		try_files $uri $uri/ /index.php?$query_string;
+	}
+
+	location / {
+		try_files $uri $uri/ /index.php?$query_string;
+	}
+
+	location ~ \.php$ {
+		include        fastcgi_params;
+		fastcgi_param  SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+		fastcgi_param  DOCUMENT_ROOT   $realpath_root;
+		fastcgi_pass   127.0.0.1:9000;
+	}
+
+	# Security/headers (basic)
+	client_max_body_size 25m;
+}
+
+
