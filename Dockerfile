@@ -13,11 +13,11 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-COPY composer.json composer.lock ./
-
-RUN composer install --optimize-autoloader --no-dev --no-interaction
-
+# انسخ كل شيء أولاً
 COPY . .
+
+# ثم شغّل composer
+RUN composer install --optimize-autoloader --no-dev --no-interaction
 
 RUN php artisan optimize
 RUN php artisan filament:optimize
