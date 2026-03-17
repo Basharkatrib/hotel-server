@@ -380,4 +380,23 @@ class HotelController extends Controller
             ['Image deleted successfully.']
         );
     }
+
+    /**
+     * Get unique locations (countries and cities) where hotels are available.
+     */
+    public function getLocations(): JsonResponse
+    {
+        $locations = Hotel::select('city', 'country')
+            ->distinct()
+            ->get();
+            
+        $countries = $locations->pluck('country')->unique()->values();
+        $cities = $locations->pluck('city')->unique()->values();
+
+        return $this->success([
+            'countries' => $countries,
+            'cities' => $cities,
+            'locations' => $locations
+        ], ['Locations retrieved successfully.']);
+    }
 }

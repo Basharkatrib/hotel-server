@@ -34,6 +34,7 @@ Route::prefix('auth')->group(function () {
 
 // Public hotel routes
 Route::get('/hotels', [HotelController::class, 'index']);
+Route::get('/locations', [HotelController::class, 'getLocations']);
 Route::get('/hotels/{hotel}', [HotelController::class, 'show']);
 Route::get('/hotels/{hotel}/reviews', [HotelReviewController::class, 'index']);
 Route::get('/hotels/{hotel}/reviews/stats', [HotelReviewController::class, 'stats']);
