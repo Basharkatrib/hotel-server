@@ -116,6 +116,20 @@ class RoomController extends Controller
             $query->where('is_available', true);
         }
 
+        // Filter by date availability
+        if ($request->filled('check_in_date') && $request->filled('check_out_date')) {
+            $checkInDate = $request->get('check_in_date');
+            $checkOutDate = $request->get('check_out_date');
+
+            $query->whereDoesntHave('bookings', function ($bq) use ($checkInDate, $checkOutDate) {
+                $bq->whereIn('status', ['pending', 'confirmed'])
+                   ->where(function ($inner) use ($checkInDate, $checkOutDate) {
+                       $inner->whereDate('check_in_date', '<=', $checkOutDate)
+                             ->whereDate('check_out_date', '>=', $checkInDate);
+                   });
+            });
+        }
+
         // Only active rooms by default
         if (!$request->has('include_inactive')) {
             $query->where('is_active', true);
@@ -152,8 +166,8 @@ class RoomController extends Controller
                     $hasConflict = $room->bookings()
                         ->whereIn('status', ['pending', 'confirmed'])
                         ->where(function ($query) use ($checkIn, $checkOut) {
-                            $query->where('check_in_date', '<', $checkOut)
-                                  ->where('check_out_date', '>', $checkIn);
+                            $query->whereDate('check_in_date', '<=', $checkOut)
+                                  ->whereDate('check_out_date', '>=', $checkIn);
                         })
                         ->exists();
                     
@@ -164,8 +178,8 @@ class RoomController extends Controller
                         $conflictingBooking = $room->bookings()
                             ->whereIn('status', ['pending', 'confirmed'])
                             ->where(function ($query) use ($checkIn, $checkOut) {
-                                $query->where('check_in_date', '<', $checkOut)
-                                      ->where('check_out_date', '>', $checkIn);
+                                $query->whereDate('check_in_date', '<=', $checkOut)
+                                      ->whereDate('check_out_date', '>=', $checkIn);
                             })
                             ->first(['check_in_date', 'check_out_date']);
                         

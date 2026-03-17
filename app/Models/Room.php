@@ -125,8 +125,8 @@ class Room extends Model
             ->whereIn('status', ['pending', 'confirmed'])
             ->where(function ($query) use ($checkIn, $checkOut) {
                 $query->where(function ($q) use ($checkIn, $checkOut) {
-                    $q->where('check_in_date', '<', $checkOut)
-                      ->where('check_out_date', '>', $checkIn);
+                    $q->whereDate('check_in_date', '<=', $checkOut)
+                      ->whereDate('check_out_date', '>=', $checkIn);
                 });
             })
             ->exists();

@@ -52,8 +52,8 @@ class BookingController extends Controller
             $conflictingBookings = $room->bookings()
                 ->whereIn('status', ['pending', 'confirmed'])
                 ->where(function ($query) use ($request) {
-                    $query->where('check_in_date', '<', $request->check_out_date)
-                          ->where('check_out_date', '>', $request->check_in_date);
+                    $query->whereDate('check_in_date', '<=', $request->check_out_date)
+                          ->whereDate('check_out_date', '>=', $request->check_in_date);
                 })
                 ->get(['check_in_date', 'check_out_date']);
 

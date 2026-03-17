@@ -51,19 +51,37 @@ class HotelController extends Controller
         }
 
         if ($request->has('city')) {
-            $query->where('city', 'like', '%' . $request->city . '%');
+            $city = $request->city;
+            $query->where(function ($q) use ($city) {
+                $q->where('city', 'like', '%' . $city . '%')
+                  ->orWhere('country', 'like', '%' . $city . '%');
+            });
         }
 
-        // Guests filter: hotels that have at least one room
-        // which can accommodate the requested number of guests.
-        if ($request->filled('guests')) {
-            $guests = (int) $request->get('guests');
+        // Guests and Availability filter: hotels that have at least one room
+        // which can accommodate the requested number of guests AND is available for the dates.
+        if ($request->filled('guests') || ($request->filled('check_in_date') && $request->filled('check_out_date'))) {
+            $query->whereHas('rooms', function (Builder $q) use ($request) {
+                $q->where('is_available', true)
+                  ->where('is_active', true);
 
-            if ($guests > 0) {
-                $query->whereHas('rooms', function (Builder $q) use ($guests) {
-                    $q->where('max_guests', '>=', $guests);
-                });
-            }
+                if ($request->filled('guests')) {
+                    $q->where('max_guests', '>=', (int) $request->get('guests'));
+                }
+
+                if ($request->filled('check_in_date') && $request->filled('check_out_date')) {
+                    $checkInDate = $request->get('check_in_date');
+                    $checkOutDate = $request->get('check_out_date');
+
+                    $q->whereDoesntHave('bookings', function ($bq) use ($checkInDate, $checkOutDate) {
+                        $bq->whereIn('status', ['pending', 'confirmed'])
+                           ->where(function ($inner) use ($checkInDate, $checkOutDate) {
+                               $inner->whereDate('check_in_date', '<=', $checkOutDate)
+                                     ->whereDate('check_out_date', '>=', $checkInDate);
+                           });
+                    });
+                }
+            });
         }
 
         if ($request->has('has_free_cancellation') && $request->has_free_cancellation) {
