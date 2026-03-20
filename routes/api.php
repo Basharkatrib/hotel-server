@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\RoomController;
 use App\Http\Controllers\Api\RoomReviewController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ReceiptController;
+use App\Http\Controllers\Api\AdvertisementController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -45,6 +46,7 @@ Route::get('/rooms/recommend', [RoomController::class, 'recommend']);
 Route::get('/rooms/{room}', [RoomController::class, 'show']);
 Route::get('/rooms/{room}/reviews', [RoomReviewController::class, 'index']);
 Route::get('/rooms/{room}/reviews/stats', [RoomReviewController::class, 'stats']);
+Route::get('/advertisements', [AdvertisementController::class, 'index']);
 
 // Public booking routes
 Route::post('/bookings/check-availability', [BookingController::class, 'checkAvailability']);
