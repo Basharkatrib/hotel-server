@@ -159,7 +159,8 @@ class RoomController extends Controller
         // Add availability information for each room if dates are provided
         $roomsWithAvailability = collect($rooms->items())->map(function ($room) use ($checkIn, $checkOut) {
             $roomArray = $room->toArray();
-            
+            $roomArray = $this->applyAdvertisementDiscount($room, $roomArray);
+
             // Check if room is available for the selected dates
             if ($checkIn && $checkOut) {
                 try {
@@ -298,8 +299,11 @@ class RoomController extends Controller
             return $this->error(['Room not found.'], 404);
         }
 
+        $roomArray = $room->toArray();
+        $roomArray = $this->applyAdvertisementDiscount($room, $roomArray);
+
         return $this->success(
-            ['room' => $room],
+            ['room' => $roomArray],
             ['Room retrieved successfully.']
         );
     }
@@ -558,6 +562,17 @@ class RoomController extends Controller
             }
 
             $room->recommendation_score = $score;
+
+            $ad = $room->getActiveAdvertisement();
+            $room->original_price       = $room->price_per_night;
+            $room->price_after_discount = $ad ? $ad->applyDiscount($room->price_per_night) : $room->price_per_night;
+            $room->has_discount         = $ad !== null;
+            $room->discount             = $ad ? [
+                'title'   => $ad->title,
+                'type'    => $ad->discount_type,
+                'value'   => $ad->discount_value,
+                'ends_at' => $ad->ends_at,
+            ] : null;
             return $room;
         });
 
@@ -571,5 +586,25 @@ class RoomController extends Controller
             'rooms' => $limitedRooms,
             'total_found' => $sortedRooms->count()
         ], ['Recommendations generated successfully.']);
+    }
+
+    /**
+     * Apply active advertisement discount to a room array.
+    */
+    private function applyAdvertisementDiscount(Room $room, array $roomArray): array
+    {
+        $ad = $room->getActiveAdvertisement();
+
+        $roomArray['original_price']       = $room->price_per_night;
+        $roomArray['price_after_discount'] = $ad ? $ad->applyDiscount($room->price_per_night) : $room->price_per_night;
+        $roomArray['has_discount']         = $ad !== null;
+        $roomArray['discount']             = $ad ? [
+            'title'          => $ad->title,
+            'type'           => $ad->discount_type,
+            'value'          => $ad->discount_value,
+            'ends_at'        => $ad->ends_at,
+        ] : null;
+
+        return $roomArray;
     }
 }

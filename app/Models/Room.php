@@ -75,6 +75,21 @@ class Room extends Model
         'images' => 'array',
     ];
 
+    protected $appends = ['has_discount', 'advertisement_discount'];
+
+
+    public function getPricePerNightAttribute($value): float
+{
+    if (!$this->hotel_id) return $value;
+
+    try {
+        $ad = $this->getActiveAdvertisement();
+        return $ad ? $ad->applyDiscount($value) : $value;
+    } catch (\Exception $e) {
+        return $value;
+    }
+}
+
     /**
      * Get the hotel that owns the room.
      */
@@ -95,9 +110,13 @@ class Room extends Model
      * Check if room has discount.
      */
     public function getHasDiscountAttribute(): bool
-    {
-        return $this->original_price && $this->original_price > $this->price_per_night;
+{
+    try {
+        return $this->getActiveAdvertisement() !== null;
+    } catch (\Exception $e) {
+        return false;
     }
+}
 
     /**
      * Get the bookings for the room.
@@ -169,4 +188,40 @@ class Room extends Model
         }
         return $this->hotel && $this->hotel->isOwnedBy($userId);
     }
+
+
+        public function advertisements()
+    {
+        return $this->belongsToMany(Advertisement::class);
+    }
+
+    // أضفها مع باقي التوابع
+    public function getActiveAdvertisement(): ?Advertisement
+    {
+        // أولاً: إعلان خاص بهذه الغرفة
+        $specific = $this->advertisements()->active()->first();
+        if ($specific) return $specific;
+
+        return Advertisement::where('hotel_id', $this->hotel_id)
+            ->where('applies_to', 'all_rooms')
+            ->active()
+            ->first();
+    }
+
+        public function getAdvertisementDiscountAttribute(): ?array
+    {
+        try {
+            $ad = $this->getActiveAdvertisement();
+            if (!$ad) return null;
+
+            return [
+                'value' => $ad->discount_value,
+                'type'  => $ad->discount_type, // percentage أو fixed
+            ];
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+
 }
