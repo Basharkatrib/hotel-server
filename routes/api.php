@@ -62,6 +62,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
     Route::put('/user/profile', [AuthController::class, 'updateProfile']);
     Route::post('/user/avatar', [AuthController::class, 'uploadAvatar']);
+    Route::delete('/user/avatar', [AuthController::class, 'deleteAvatar']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     
     // Protected user routes (admin only)

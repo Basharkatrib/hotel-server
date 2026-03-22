@@ -412,6 +412,29 @@ class AuthController extends Controller
     }
 
     /**
+     * Delete user avatar (profile image)
+     */
+    public function deleteAvatar(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user->avatar) {
+            return $this->error(['User does not have an avatar.'], 404);
+        }
+
+        // Delete avatar file if it exists and is stored in /storage
+        if (str_starts_with($user->avatar, '/storage/')) {
+            $oldPath = str_replace('/storage/', '', $user->avatar);
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        $user->avatar = null;
+        $user->save();
+
+        return $this->success(null, ['Avatar deleted successfully.']);
+    }
+
+    /**
      * Forgot password - send reset OTP
      */
     public function forgotPassword(Request $request): JsonResponse
