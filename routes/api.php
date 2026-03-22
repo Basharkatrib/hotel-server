@@ -48,6 +48,9 @@ Route::get('/rooms/{room}/reviews', [RoomReviewController::class, 'index']);
 Route::get('/rooms/{room}/reviews/stats', [RoomReviewController::class, 'stats']);
 Route::get('/advertisements', [AdvertisementController::class, 'index']);
 
+// Chat: available for all; auth is optional (logged-in users get richer context)
+Route::post('/chat', [\App\Http\Controllers\Api\ChatController::class, 'chat']);
+
 // Public booking routes
 Route::post('/bookings/check-availability', [BookingController::class, 'checkAvailability']);
 
