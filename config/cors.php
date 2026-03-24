@@ -19,7 +19,7 @@ return [
         'http://127.0.0.1:5174',
         'http://localhost:4173',
         'http://127.0.0.1:4173',
-        'https://bookinghotelsinfo.netlify.app',
+        'https://vayka.netlify.app',
         'https://vayka-api-reco.netlify.app',
     ],
 
