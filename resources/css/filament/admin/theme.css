@@ -1,0 +1,31 @@
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../../app/Filament/**/*';
+@source '../../../../resources/views/filament/**/*';
+
+
+/* ===== إخفاء قسم "Selected Location" أسفل الخريطة ===== */
+
+/* الـ div الكامل الذي يحتوي على الأيقونة والإحداثيات */
+.relative.w-full.mx-auto.rounded-lg > div[x-show],
+.relative.w-full.mx-auto > .p-4 {
+    display: none !important;
+}
+
+/* استهداف أكثر دقة بناءً على الـ blade template */
+.leaflet-map-picker + div,
+.leaflet-map-picker ~ div.p-4 {
+    display: none !important;
+}
+
+/* إخفاء الـ div الذي يظهر بعد div الخريطة مباشرة */
+div[style*="height:"] + div[class*="p-4"],
+div[style*="height"] + div[class*="border-t"] {
+    display: none !important;
+}
+
+/* SVG الأيقونة الصغيرة إن كانت ظاهرة */
+svg.h-5.w-5.text-gray-500 {
+    display: none !important;
+}
+

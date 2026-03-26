@@ -10,6 +10,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Afsakar\LeafletMapPicker\LeafletMapPicker;
 
 class HotelForm
 {
@@ -47,30 +48,68 @@ class HotelForm
                         TextInput::make('address')
                             ->required()
                             ->maxLength(255)
-                            ->placeholder('Marina, 19-21, Ciutat Vella')
                             ->columnSpan(2),
-                        
+
                         TextInput::make('city')
-                            ->placeholder('Barcelona')
                             ->columnSpan(1),
-                        
+
                         TextInput::make('country')
                             ->required()
                             ->default('Spain')
                             ->columnSpan(1),
 
+                        LeafletMapPicker::make('location')
+    ->label('Pick Location on Map')
+    ->height('350px')
+    ->defaultLocation([25.2048, 55.2708])
+    ->defaultZoom(12)
+    ->draggable()
+    ->clickable()
+    ->tileProvider('openstreetmap')
+    ->myLocationButtonLabel('Use My Location')
+    ->columnSpanFull()
+    ->live()  // ← مهم جداً
+    ->afterStateUpdated(function ($state, callable $set) {
+        // جرب الـ formats المختلفة للـ package
+        if (is_array($state)) {
+            // format 1: [lat, lng]
+            if (isset($state[0], $state[1])) {
+                $set('latitude', $state[0]);
+                $set('longitude', $state[1]);
+            }
+            // format 2: ['lat' => ..., 'lng' => ...]
+            elseif (isset($state['lat'], $state['lng'])) {
+                $set('latitude', $state['lat']);
+                $set('longitude', $state['lng']);
+            }
+            // format 3: ['latitude' => ..., 'longitude' => ...]
+            elseif (isset($state['latitude'], $state['longitude'])) {
+                $set('latitude', $state['latitude']);
+                $set('longitude', $state['longitude']);
+            }
+        }
+    })
+    ->afterStateHydrated(function (callable $set, $record) {
+        if ($record?->latitude && $record?->longitude) {
+            $set('location', [$record->latitude, $record->longitude]);
+        }
+    })
+    ->extraAttributes([
+        'style' => '
+            --leaflet-marker-size: 0;
+        '
+    ]),
+
                         TextInput::make('latitude')
                             ->numeric()
-                            ->placeholder('41.3874')
                             ->step(0.00000001)
-                            ->helperText('Latitude coordinate')
+                            ->readOnly()
                             ->columnSpan(1),
-                        
+
                         TextInput::make('longitude')
                             ->numeric()
-                            ->placeholder('2.1686')
                             ->step(0.00000001)
-                            ->helperText('Longitude coordinate')
+                            ->readOnly()
                             ->columnSpan(1),
 
                         TextInput::make('distance_from_center')
