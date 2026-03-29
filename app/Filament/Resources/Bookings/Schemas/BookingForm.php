@@ -80,6 +80,9 @@ class BookingForm
                             ->label('Guest Phone')
                             ->tel()
                             ->disabled(),
+                        \Filament\Forms\Components\TextInput::make('special_requests')
+                            ->label('Special Requests')
+                            ->disabled(),
                     ])
                     ->columns(3),
             ]);

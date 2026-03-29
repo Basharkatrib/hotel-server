@@ -69,6 +69,14 @@ class BookingsTable
                     ->label('Guests')
                     ->sortable()
                     ->formatStateUsing(fn ($state) => ($state ?? 0) . ' guest' . (($state ?? 0) != 1 ? 's' : '')),
+
+                TextColumn::make('special_requests')
+                    ->label('Special Requests')
+                    ->sortable()
+                    ->alignEnd()
+                    ->limit(50)
+                    ->placeholder('None')
+                    ->wrap(),   
                 
                 TextColumn::make('total_amount')
                     ->label('Total Amount')
