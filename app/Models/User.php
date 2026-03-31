@@ -189,4 +189,8 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->fcm_token;
     }
+    public function hotelApplication()
+{
+    return $this->hasOne(HotelApplication::class);
+}
 }

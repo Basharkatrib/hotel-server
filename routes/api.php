@@ -12,7 +12,10 @@ use App\Http\Controllers\Api\RoomReviewController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ReceiptController;
 use App\Http\Controllers\Api\AdvertisementController;
+use App\Http\Controllers\Api\PartnerApplicationController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
+use App\Models\HotelDocument;
 
 /*
 |--------------------------------------------------------------------------
@@ -64,6 +67,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/user/avatar', [AuthController::class, 'uploadAvatar']);
     Route::delete('/user/avatar', [AuthController::class, 'deleteAvatar']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::post('/partner/apply', [PartnerApplicationController::class, 'store']);
     
     // Protected user routes (admin only)
     Route::get('/users', [UserController::class, 'index']);
@@ -146,3 +150,8 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::get('/bookings/{id}/receipt/download', [ReceiptController::class, 'download']);
 Route::get('/bookings/{id}/receipt/preview', [ReceiptController::class, 'preview']);
 
+
+Route::get('/admin/document/{document}/download', function (HotelDocument $document) {
+    abort_unless(auth()->user()->role === 'admin', 403);
+    return response()->file(storage_path('app/private/' . $document->disk_path));
+})->middleware(['auth:sanctum']);
