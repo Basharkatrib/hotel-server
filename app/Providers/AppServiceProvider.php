@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Mail\Mailer;
+use App\Mail\GmailTransport;
+use Illuminate\Support\Facades\Mail;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,5 +25,8 @@ class AppServiceProvider extends ServiceProvider
         if(env('APP_ENV') !== 'local') {
         URL::forceScheme('https');
         }
+         \Illuminate\Support\Facades\Mail::extend('gmail', function (array $config = []) {
+        return new \App\Mail\GmailTransport();
+    });
     }
 }

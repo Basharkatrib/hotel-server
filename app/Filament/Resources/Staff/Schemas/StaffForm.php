@@ -42,6 +42,10 @@ class StaffForm
                         ->dehydrated(fn ($state) => filled($state))
                         ->placeholder('Password'),
 
+                    \Filament\Forms\Components\Placeholder::make('verification_status')
+                        ->label('Account Status')
+                        ->content('Will be automatically verified after creation.'),
+
                     Select::make('hotel_id')
                         ->label('Hotel')
                         ->options(function () {

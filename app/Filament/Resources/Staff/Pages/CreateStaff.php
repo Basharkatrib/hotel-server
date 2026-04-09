@@ -19,6 +19,7 @@ class CreateStaff extends CreateRecord
             'email' => $data['staff_email'],
             'password' => Hash::make($data['staff_password']),
             'role' => 'hotel_staff',
+            'email_verified_at' => now(),
         ]);
 
         // 2. Link the new user's ID to the staff record
