@@ -38,6 +38,11 @@ class HotelController extends Controller
         }
 
         // Filters
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where('name', 'like', '%' . $search . '%');
+        }
+
         if ($request->has('type') && $request->type !== 'any') {
             $query->where('type', $request->type);
         }
