@@ -12,6 +12,7 @@
         "cheesegrits/filament-google-maps": "*",
         "dotswan/filament-map-picker": "^2.1",
         "filament/filament": "^4.2",
+        "firebase/php-jwt": "^7.0",
         "flowframe/laravel-trend": "*",
         "google/auth": "^1.50",
         "guzzlehttp/guzzle": "^7.10",

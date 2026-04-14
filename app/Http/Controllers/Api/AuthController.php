@@ -147,6 +147,105 @@ class AuthController extends Controller
     }
 
     /**
+     * Login or Register with Google (Firebase ID Token)
+     */
+    public function googleLogin(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'token' => ['required', 'string'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors()->all(), 422);
+        }
+
+        try {
+            // 1. Get Google Public Keys (X.509 certificates)
+            $keysResponse = file_get_contents('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
+            $certs = json_decode($keysResponse, true);
+
+            // 2. Build Key objects from the X.509 certificates (compatible with all versions)
+            $keyObjects = [];
+            foreach ($certs as $kid => $cert) {
+                $keyObjects[$kid] = new \Firebase\JWT\Key($cert, 'RS256');
+            }
+
+            // 3. Decode & verify the Firebase ID Token
+            $decoded = \Firebase\JWT\JWT::decode($request->token, $keyObjects);
+
+            // 4. Verify standard claims
+            $projectId = env('FIREBASE_PROJECT_ID', 'vayka-c2a7a');
+            if ($decoded->aud !== $projectId || $decoded->iss !== 'https://securetoken.google.com/' . $projectId) {
+                return $this->error(['Invalid token audience or issuer.'], 401);
+            }
+
+            // 4. Extract user data
+            $email = $decoded->email;
+            $name = $decoded->name ?? explode('@', $email)[0];
+            $picture = $decoded->picture ?? null;
+            $emailVerified = $decoded->email_verified ?? false;
+
+            if (!$emailVerified) {
+                return $this->error(['Google email is not verified.'], 403);
+            }
+
+            // 5. Find or Create User
+            $user = User::where('email', $email)->first();
+
+            if (!$user) {
+                $user = User::create([
+                    'name' => $name,
+                    'email' => $email,
+                    'password' => Hash::make(\Illuminate\Support\Str::random(24)), // Random password
+                    'role' => 'user',
+                    'email_verified_at' => now(),
+                    'avatar' => $picture,
+                ]);
+            } else {
+                // Update avatar and mark as verified if they weren't
+                $user->email_verified_at = $user->email_verified_at ?? now();
+                if (!$user->avatar && $picture) {
+                    $user->avatar = $picture;
+                }
+                $user->save();
+            }
+
+            // 6. Create Sanctum token
+            $token = $user->createToken('access_token')->plainTextToken;
+
+            // 7. Prepare user data
+            $userData = [
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'avatar' => $user->avatar,
+                    'email_verified_at' => $user->email_verified_at,
+                ],
+                'access_token' => $token,
+            ];
+
+            return $this->success($userData, ['Login with Google successful.'])
+                ->withCookie(cookie(
+                    'refresh_token',
+                    $token,
+                    60 * 24 * 7,
+                    '/',
+                    null,
+                    true,
+                    true,
+                    false,
+                    'lax'
+                ));
+
+        } catch (\Exception $e) {
+            \Log::error('Google Login Error: ' . $e->getMessage());
+            return $this->error(['Invalid Google token.', $e->getMessage()], 401);
+        }
+    }
+
+    /**
      * Verify OTP and login
      */
     public function verifyOtp(Request $request): JsonResponse
