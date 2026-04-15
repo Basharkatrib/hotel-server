@@ -702,7 +702,7 @@ class AuthController extends Controller
             "Your verification code is: {$code}\n\nThis code will expire in 10 minutes.",
             function ($message) use ($email) {
                 $message->to($email)
-                    ->subject('Your Verification Code - Tripto');
+                    ->subject('Your Verification Code - Vayka');
             }
         );
     }
