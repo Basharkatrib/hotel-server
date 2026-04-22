@@ -58,6 +58,9 @@ Route::post('/chat', [\App\Http\Controllers\Api\ChatController::class, 'chat']);
 // Public booking routes
 Route::post('/bookings/check-availability', [BookingController::class, 'checkAvailability']);
 
+// Contact routes
+Route::post('/contact', [\App\Http\Controllers\ContactMessageController::class, 'store']);
+
 // Stripe webhook (must be outside auth middleware)
 Route::post('/payments/webhook', [PaymentController::class, 'webhook']);
 
