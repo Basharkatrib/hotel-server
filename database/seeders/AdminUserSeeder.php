@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\Hotel;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -47,6 +48,13 @@ class AdminUserSeeder extends Seeder
             $this->command->info('🔑 Password: Owner123');
         } else {
             $this->command->warn('Hotel Owner already exists.');
+        }
+
+        // Assign the first hotel to this owner
+        $firstHotel = Hotel::first();
+        if ($firstHotel) {
+            $firstHotel->update(['user_id' => $owner->id]);
+            $this->command->info("🏨 Assigned '{$firstHotel->name}' to Hotel Owner.");
         }
 
         // 3. Regular User
