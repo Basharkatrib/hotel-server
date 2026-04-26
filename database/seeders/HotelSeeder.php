@@ -223,6 +223,11 @@ class HotelSeeder extends Seeder
                 'reviews_count' => rand(100, 2000),
                 'images' => $data['images'],
                 'amenities' => ['Free WiFi', 'Swimming Pool', 'Air Conditioning', '24/7 Reception', 'Restaurant'],
+                'is_featured' => rand(1, 10) > 7, // 30% chance
+                'is_getaway_deal' => rand(1, 10) > 8, // 20% chance
+                'has_spa_access' => rand(1, 10) > 5,
+                'has_free_cancellation' => rand(1, 10) > 4,
+                'has_breakfast_included' => rand(1, 10) > 3,
             ]);
 
             foreach ($data['rooms'] as $roomIndex => $roomData) {
