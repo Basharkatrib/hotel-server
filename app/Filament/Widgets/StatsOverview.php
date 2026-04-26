@@ -33,15 +33,17 @@ class StatsOverview extends BaseWidget
                     ->color('info');
             }
 
-            // Hotels Count
+            // Hotels Count (Admin or Owner with multiple hotels)
             $hotelsCount = $user->isAdmin()
                 ? Hotel::count()
                 : Hotel::whereIn('id', $hotelIds)->count();
 
-            $stats[] = Stat::make('Total Hotels', $hotelsCount)
-                ->description('Active hotels in system')
-                ->descriptionIcon('heroicon-m-building-office')
-                ->color('success');
+            if ($user->isAdmin() || $hotelsCount > 1) {
+                $stats[] = Stat::make('Total Hotels', $hotelsCount)
+                    ->description($user->isAdmin() ? 'Active hotels in system' : 'Your managed hotels')
+                    ->descriptionIcon('heroicon-m-building-office')
+                    ->color('success');
+            }
 
             // Bookings Count
             $bookingsQuery = Booking::query();
@@ -49,19 +51,27 @@ class StatsOverview extends BaseWidget
                 $bookingsQuery->whereIn('hotel_id', $hotelIds);
             }
             $stats[] = Stat::make('Total Bookings', $bookingsQuery->count())
-                ->description('Total bookings made')
+                ->description($user->isAdmin() ? 'Total bookings made' : 'Bookings for your hotels')
                 ->descriptionIcon('heroicon-m-calendar-days')
                 ->color('primary');
 
-            // Revenue
-            $revenueQuery = Booking::query()->whereIn('status', ['confirmed', 'completed', 'pending']);
-            if (!$user->isAdmin()) {
-                $revenueQuery->whereIn('hotel_id', $hotelIds);
+            // Revenue / Income
+            $revenueQuery = Booking::query();
+            if ($user->isAdmin()) {
+                $revenueQuery->whereIn('status', ['confirmed', 'completed', 'pending']);
+                $label = 'Total Revenue';
+                $description = 'Includes Pending, Confirmed & Completed';
+            } else {
+                $revenueQuery->whereIn('hotel_id', $hotelIds)
+                             ->whereIn('status', ['confirmed', 'completed']);
+                $label = 'Total Income';
+                $description = 'Confirmed and Completed bookings';
             }
+            
             $revenue = $revenueQuery->sum('total_amount');
 
-            $stats[] = Stat::make('Total Revenue', '$' . number_format($revenue, 2))
-                ->description('Includes Pending, Confirmed & Completed')
+            $stats[] = Stat::make($label, '$' . number_format($revenue, 2))
+                ->description($description)
                 ->descriptionIcon('heroicon-m-currency-dollar')
                 ->color('success');
 

@@ -14,7 +14,7 @@ class RevenueTrend extends ChartWidget
 
     public function getHeading(): string
     {
-        return 'Monthly Revenue';
+        return auth()->user()->isAdmin() ? 'Monthly Revenue' : 'Monthly Income';
     }
 
     protected function getData(): array
@@ -25,11 +25,13 @@ class RevenueTrend extends ChartWidget
 
         return Cache::remember($cacheKey, 120, function () use ($user, $hotelIds) {
             $query = Booking::query()
-                ->whereIn('status', ['confirmed', 'completed', 'pending'])
                 ->whereYear('created_at', now()->year);
 
-            if (!$user->isAdmin()) {
-                $query->whereIn('hotel_id', $hotelIds);
+            if ($user->isAdmin()) {
+                $query->whereIn('status', ['confirmed', 'completed', 'pending']);
+            } else {
+                $query->whereIn('hotel_id', $hotelIds)
+                      ->whereIn('status', ['confirmed', 'completed']);
             }
 
             $monthlyRevenue = $query
