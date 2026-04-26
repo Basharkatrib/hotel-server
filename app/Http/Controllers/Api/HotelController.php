@@ -113,8 +113,10 @@ class HotelController extends Controller
             $query->orderBy($sortBy, $sortOrder);
         }
 
-        // Include max capacity per hotel based on related rooms
+        // Include max capacity and price range per hotel based on related rooms
         $query->withMax('rooms as max_guests_capacity', 'max_guests');
+        $query->withMin('rooms as min_room_price', 'price_per_night');
+        $query->withMax('rooms as max_room_price', 'price_per_night');
 
         // Pagination
         $perPage = $request->get('per_page', 15);

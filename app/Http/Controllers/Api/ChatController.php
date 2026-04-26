@@ -234,6 +234,7 @@ If outside your scope: politely say so in the user's language and suggest suppor
 | search_hotels      | city/country mentioned: "دبي", "Spain", "Dubai", "Amman"               |
 | get_room_details   | "الغرف", "أسعار الغرف", "rooms", "room prices"                         |
 | get_user_bookings  | "حجوزاتي", "my bookings", "reservations"                               |
+| compare_hotels     | "قارن", "الفرق بين", "مقارنة", "compare", "difference between"          |
 
 === RESPONSE FORMAT ===
 Hotels:
@@ -245,6 +246,9 @@ Rooms:
 Bookings:
 1. 🏨 [Hotel] — [Room] | 📅 [in] → [out] | 🌙 [N] nights | 👥 [N] guests | 💰 [total]
    ✅ Confirmed / ⏳ Pending / ❌ Cancelled / 🏁 Completed
+
+Comparison:
+Use a structured list or a table-like format to compare hotels based on rating, price, amenities, and location.
 
 Rules: warm, concise, professional. Never fabricate data. Support: support@vayka.com
 EOT;
@@ -311,6 +315,24 @@ EOT;
                     ],
                 ],
             ],
+            [
+                'type' => 'function',
+                'function' => [
+                    'name'        => 'compare_hotels',
+                    'description' => 'Fetch detailed information for two or more hotels to compare them. Use when user asks for a comparison between specific hotels.',
+                    'parameters'  => [
+                        'type'       => 'object',
+                        'properties' => [
+                            'hotel_names' => [
+                                'type'        => 'array',
+                                'items'       => ['type' => 'string'],
+                                'description' => 'List of hotel names to compare',
+                            ],
+                        ],
+                        'required' => ['hotel_names'],
+                    ],
+                ],
+            ],
         ];
     }
 
@@ -325,6 +347,7 @@ EOT;
                 'search_hotels'     => $this->toolSearchHotels($args),
                 'get_room_details'  => $this->toolGetRoomDetails($args),
                 'get_user_bookings' => $this->toolGetUserBookings($args, $user),
+                'compare_hotels'    => $this->toolCompareHotels($args),
                 default             => ['error' => "Unknown tool: {$name}"],
             };
         } catch (\Exception $e) {
@@ -470,6 +493,43 @@ EOT;
                 'total'     => '$' . number_format($b->total_amount, 2),
                 'status'    => $b->status,
                 'link'      => $b->hotel?->slug ? "/hotel/{$b->hotel->slug}" : null,
+            ])->toArray(),
+        ];
+    }
+    private function toolCompareHotels(array $args): array
+    {
+        $names = $args['hotel_names'] ?? [];
+        if (empty($names)) {
+            return ['error' => 'No hotel names provided for comparison.'];
+        }
+
+        $hotels = Hotel::where(function ($q) use ($names) {
+                foreach ($names as $name) {
+                    $q->orWhere('name', 'like', "%{$name}%")
+                      ->orWhere('slug', 'like', "%{$name}%");
+                }
+            })
+            ->limit(4)
+            ->get();
+
+        if ($hotels->isEmpty()) {
+            return ['found' => false, 'message' => 'Could not find any of the specified hotels to compare.'];
+        }
+
+        return [
+            'found' => true,
+            'hotels' => $hotels->map(fn($h) => [
+                'name'               => $h->name,
+                'location'           => "{$h->city}, {$h->country}",
+                'rating'             => $h->rating,
+                'price_per_night'    => '$' . number_format($h->price_per_night, 0),
+                'type'               => $h->type,
+                'description'        => \Illuminate\Support\Str::limit($h->description, 150),
+                'amenities'          => is_array($h->amenities) ? array_slice($h->amenities, 0, 5) : [],
+                'distance_center'    => $h->distance_from_center . ' km',
+                'breakfast_included' => $h->has_breakfast_included ? 'Yes' : 'No',
+                'spa_access'         => $h->has_spa_access ? 'Yes' : 'No',
+                'link'               => "/hotel/{$h->slug}",
             ])->toArray(),
         ];
     }
