@@ -86,6 +86,7 @@ class BookingService
                 'guests_details' => $data['guests_details'] ?? null,
                 'price_per_night' => $room->price_per_night,
                 'special_requests' => $data['special_requests'] ?? null,
+                'qr_token' => bin2hex(random_bytes(32)), // Generate unique 64-char token
             ]);
 
             $booking->calculateTotal();

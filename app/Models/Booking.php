@@ -32,6 +32,7 @@ class Booking extends Model
         'total_amount',
         'status',
         'special_requests',
+        'qr_token',
     ];
 
     protected $casts = [

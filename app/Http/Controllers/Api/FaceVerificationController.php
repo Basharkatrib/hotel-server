@@ -144,6 +144,37 @@ class FaceVerificationController extends Controller
     }
 
     /**
+     * Verify a QR code token and return the booking details.
+     */
+    public function verifyQRCode(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'hotel_id' => 'required|exists:hotels,id',
+            'qr_token' => 'required|string|size:64',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors()->all(), 422);
+        }
+
+        $booking = Booking::where('hotel_id', $request->hotel_id)
+            ->where('qr_token', $request->qr_token)
+            ->whereIn('status', ['confirmed', 'completed'])
+            ->first();
+
+        if (!$booking) {
+            return $this->error(['Invalid or expired QR code.'], 404);
+        }
+
+        return $this->success([
+            'booking_id' => $booking->id,
+            'guest_name' => $booking->guest_name,
+            'room_number' => $booking->room->name ?? 'N/A',
+            'already_enrolled' => !is_null($booking->face_descriptor),
+        ], ['QR Code verified! Welcome ' . $booking->guest_name]);
+    }
+
+    /**
      * Get owner's hotels for the login phase of the standalone app.
      */
     public function getOwnerHotels(): JsonResponse
