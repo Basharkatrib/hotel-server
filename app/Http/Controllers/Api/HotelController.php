@@ -47,12 +47,15 @@ class HotelController extends Controller
             $query->where('type', $request->type);
         }
 
-        if ($request->has('min_price')) {
-            $query->where('price_per_night', '>=', $request->min_price);
-        }
-
-        if ($request->has('max_price')) {
-            $query->where('price_per_night', '<=', $request->max_price);
+        if ($request->has('min_price') || $request->has('max_price')) {
+            $query->whereHas('rooms', function (Builder $q) use ($request) {
+                if ($request->has('min_price')) {
+                    $q->where('price_per_night', '>=', $request->min_price);
+                }
+                if ($request->has('max_price')) {
+                    $q->where('price_per_night', '<=', $request->max_price);
+                }
+            });
         }
 
         if ($request->has('city')) {
@@ -105,18 +108,20 @@ class HotelController extends Controller
             $query->where('is_featured', true);
         }
 
-        // Sorting
-        $sortBy = $request->get('sort_by', 'created_at');
-        $sortOrder = $request->get('sort_order', 'desc');
-        
-        if (in_array($sortBy, ['price_per_night', 'rating', 'created_at'])) {
-            $query->orderBy($sortBy, $sortOrder);
-        }
-
         // Include max capacity and price range per hotel based on related rooms
         $query->withMax('rooms as max_guests_capacity', 'max_guests');
         $query->withMin('rooms as min_room_price', 'price_per_night');
         $query->withMax('rooms as max_room_price', 'price_per_night');
+
+        // Sorting
+        $sortBy = $request->get('sort_by', 'created_at');
+        $sortOrder = $request->get('sort_order', 'desc');
+        
+        if ($sortBy === 'price_per_night') {
+            $query->orderBy('min_room_price', $sortOrder);
+        } elseif (in_array($sortBy, ['rating', 'created_at'])) {
+            $query->orderBy($sortBy, $sortOrder);
+        }
 
         // Pagination
         $perPage = $request->get('per_page', 15);

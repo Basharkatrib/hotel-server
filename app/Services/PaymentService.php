@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\Booking;
 use App\Models\Payment;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Stripe\PaymentIntent;
 use Stripe\Refund;
 
@@ -101,6 +103,30 @@ class PaymentService
         ]);
 
         Log::info("Payment {$payment->id} confirmed.");
+
+        // 3. Send booking receipt email (similar to OTP sending method)
+        try {
+            $booking = Booking::with(['room', 'hotel', 'payment', 'user'])->find($payment->booking_id);
+            if ($booking && $booking->user && $booking->user->email) {
+                $pdf = Pdf::loadView('receipts.booking', compact('booking'));
+                Mail::send(
+                    'receipts.booking',
+                    compact('booking'),
+                    function ($message) use ($booking, $pdf) {
+                        $message->to($booking->user->email)
+                            ->subject("Your Booking Receipt - Booking #{$booking->id} - Vayka")
+                            ->attachData($pdf->output(), "receipt-booking-{$booking->id}.pdf", [
+                                'mime' => 'application/pdf',
+                            ]);
+                    }
+                );
+                Log::info("Booking receipt email with PDF attachment sent to {$booking->user->email} for Booking #{$booking->id}");
+            } else {
+                Log::warning("Could not send booking receipt: user or user email is missing.");
+            }
+        } catch (\Exception $e) {
+            Log::error("Failed to send booking receipt email for Booking #{$payment->booking_id}: " . $e->getMessage());
+        }
 
         return $payment->fresh(['booking.room:id,name', 'booking.hotel:id,name']);
     }
