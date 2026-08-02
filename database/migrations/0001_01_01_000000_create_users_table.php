@@ -30,7 +30,7 @@ return new class extends Migration
 
             // Role: user (default), admin, hotel_owner
             $table->enum('role', ['user', 'admin', 'hotel_owner'])->default('user')->index();
-
+            // All
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();
