@@ -25,7 +25,10 @@ class FavoriteController extends Controller
         $favorites = Favorite::where('user_id', $user->id)
             ->with(['favoritable' => function ($query) {
                 if ($query->getModel() instanceof Hotel) {
-                    $query->select('id', 'name', 'slug', 'city', 'country', 'price_per_night', 'rating', 'images');
+                    // نجلب الفندق مع أقل وأعلى سعر للغرف كما في صفحة Explore
+                    $query->select('id', 'name', 'slug', 'city', 'country', 'rating', 'images')
+                          ->withMin('rooms as min_room_price', 'price_per_night')
+                          ->withMax('rooms as max_room_price', 'price_per_night');
                 } elseif ($query->getModel() instanceof Room) {
                     $query->with('hotel:id,name,slug,city,country')
                           ->select('id', 'hotel_id', 'name', 'type', 'price_per_night', 'images', 'max_guests');
@@ -51,12 +54,12 @@ class FavoriteController extends Controller
 
         return $this->success([
             'hotels' => $hotels,
-            'rooms' => $rooms,
+            'rooms'  => $rooms,
             'pagination' => [
                 'current_page' => $favorites->currentPage(),
-                'last_page' => $favorites->lastPage(),
-                'per_page' => $favorites->perPage(),
-                'total' => $favorites->total(),
+                'last_page'    => $favorites->lastPage(),
+                'per_page'     => $favorites->perPage(),
+                'total'        => $favorites->total(),
             ],
         ], ['Favorites retrieved successfully.']);
     }
