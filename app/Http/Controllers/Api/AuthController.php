@@ -307,41 +307,45 @@ class AuthController extends Controller
 
     /**
      * Silent Refresh for Access Token
+     * يبحث عن الـ token في قاعدة البيانات مباشرة
+     * حتى لو كان منتهي الصلاحية، ليصدر توكن جديداً
      */
     public function refresh(Request $request): JsonResponse
     {
-        // Try to get the token from the cookie
+        // الحصول على الـ refresh_token من الـ cookie
         $refreshToken = $request->cookie('refresh_token');
 
         if (!$refreshToken) {
-            return $this->error(['No refresh token provided'], 401);
+            return $this->error(['No refresh token provided.'], 401);
         }
 
-        // In a more complex app, you'd check a dedicated refresh_tokens table.
-        // For Sanctum, if we sent the full token string, we can re-validate or issue new.
-        // Let's assume the user is still valid if the cookie is present and valid.
+        // البحث عن التوكن في قاعدة البيانات بغض النظر عن انتهاء صلاحيته
+        // نستخدم PersonalAccessToken::findToken لأنه يبحث باستخدام hash
         $tokenModel = \Laravel\Sanctum\PersonalAccessToken::findToken($refreshToken);
 
         if (!$tokenModel || !$tokenModel->tokenable) {
-            return $this->error(['Invalid refresh token'], 401);
+            return $this->error(['Invalid or expired refresh token.'], 401);
         }
 
         $user = $tokenModel->tokenable;
 
-        // Generate a new fresh access token
+        // حذف التوكن القديم (Token Rotation للأمان)
+        $tokenModel->delete();
+
+        // إصدار توكن جديد
         $newToken = $user->createToken('access_token')->plainTextToken;
 
         return $this->success([
-            'user' => $user,
-            'access_token' => $newToken
+            'user'         => $user,
+            'access_token' => $newToken,
         ])->withCookie(cookie(
             'refresh_token',
             $newToken,
-            60 * 24 * 7,
+            60 * 24 * 7, // 7 أيام
             '/',
             null,
-            true,
-            true,
+            true,  // secure
+            true,  // httpOnly
             false,
             'lax'
         ));
