@@ -22,13 +22,11 @@ class FavoriteController extends Controller
     {
         $user = $request->user();
         
+        // تحميل المفضلة مع نوع العنصر
         $favorites = Favorite::where('user_id', $user->id)
             ->with(['favoritable' => function ($query) {
                 if ($query->getModel() instanceof Hotel) {
-                    // نجلب الفندق مع أقل وأعلى سعر للغرف كما في صفحة Explore
-                    $query->select('id', 'name', 'slug', 'city', 'country', 'rating', 'images')
-                          ->withMin('rooms as min_room_price', 'price_per_night')
-                          ->withMax('rooms as max_room_price', 'price_per_night');
+                    $query->select('id', 'name', 'slug', 'city', 'country', 'rating', 'images');
                 } elseif ($query->getModel() instanceof Room) {
                     $query->with('hotel:id,name,slug,city,country')
                           ->select('id', 'hotel_id', 'name', 'type', 'price_per_night', 'images', 'max_guests');
@@ -37,15 +35,40 @@ class FavoriteController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 15));
 
-        // Separate hotels and rooms with favorite_id
+        // جمع معرّفات الفنادق لجلب نطاق السعر دفعةً واحدة
+        $hotelIds = collect($favorites->items())
+            ->filter(fn($fav) => $fav->favoritable instanceof Hotel)
+            ->map(fn($fav) => $fav->favoritable->id)
+            ->values()
+            ->all();
+
+        // جلب min_room_price و max_room_price لكل فندق
+        $roomPrices = [];
+        if (!empty($hotelIds)) {
+            $roomPrices = \App\Models\Room::selectRaw(
+                'hotel_id, MIN(price_per_night) as min_room_price, MAX(price_per_night) as max_room_price'
+            )
+                ->whereIn('hotel_id', $hotelIds)
+                ->groupBy('hotel_id')
+                ->get()
+                ->keyBy('hotel_id')
+                ->toArray();
+        }
+
+        // فصل الفنادق والغرف مع إضافة نطاق السعر للفنادق
         $hotels = [];
         $rooms = [];
 
         foreach ($favorites->items() as $favorite) {
+            if (!$favorite->favoritable) continue;
+
             $item = $favorite->favoritable->toArray();
             $item['favorite_id'] = $favorite->id;
             
             if ($favorite->favoritable instanceof Hotel) {
+                $hotelId = $favorite->favoritable->id;
+                $item['min_room_price'] = $roomPrices[$hotelId]['min_room_price'] ?? null;
+                $item['max_room_price'] = $roomPrices[$hotelId]['max_room_price'] ?? null;
                 $hotels[] = $item;
             } elseif ($favorite->favoritable instanceof Room) {
                 $rooms[] = $item;
@@ -53,8 +76,8 @@ class FavoriteController extends Controller
         }
 
         return $this->success([
-            'hotels' => $hotels,
-            'rooms'  => $rooms,
+            'hotels'     => $hotels,
+            'rooms'      => $rooms,
             'pagination' => [
                 'current_page' => $favorites->currentPage(),
                 'last_page'    => $favorites->lastPage(),
