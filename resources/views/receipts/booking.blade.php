@@ -105,7 +105,7 @@
 </head>
 <body>
     <div class="header">
-        <div class="logo">Basharkatrib Hotel</div>
+        <div class="logo">Vayka Hotel</div>
         <div class="receipt-title">Payment Receipt</div>
     </div>
 
@@ -188,8 +188,8 @@
     </div>
 
     <div class="footer">
-        <p>Thank you for choosing Basharkatrib Hotel. We wish you a pleasant stay!</p>
-        <p>If you have any questions, please contact our support at support@basharkatrib.com</p>
+        <p>Thank you for choosing Vayka Hotel. We wish you a pleasant stay!</p>
+        <p>If you have any questions, please contact our support at support@vayka.com</p>
     </div>
 </body>
 </html>
