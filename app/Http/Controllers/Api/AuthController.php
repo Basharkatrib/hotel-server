@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 
 class AuthController extends Controller
 {
@@ -312,43 +314,103 @@ class AuthController extends Controller
      */
     public function refresh(Request $request): JsonResponse
     {
-        // الحصول على الـ refresh_token من الـ cookie
         $refreshToken = $request->cookie('refresh_token');
 
         if (!$refreshToken) {
             return $this->error(['No refresh token provided.'], 401);
         }
 
-        // البحث عن التوكن في قاعدة البيانات بغض النظر عن انتهاء صلاحيته
-        // نستخدم PersonalAccessToken::findToken لأنه يبحث باستخدام hash
-        $tokenModel = \Laravel\Sanctum\PersonalAccessToken::findToken($refreshToken);
+        $tokenHash = hash('sha256', $refreshToken);
+        $cacheKey = 'refresh_used_' . $tokenHash;
 
-        if (!$tokenModel || !$tokenModel->tokenable) {
-            return $this->error(['Invalid or expired refresh token.'], 401);
+        if ($cached = Cache::get($cacheKey)) {
+            return $this->success($cached['payload'])
+                ->withCookie(cookie(
+                    'refresh_token',
+                    $cached['new_token'],
+                    60 * 24 * 7,
+                    '/',
+                    null,
+                    true,
+                    true,
+                    false,
+                    'lax'
+                ));
         }
 
-        $user = $tokenModel->tokenable;
+        $lock = Cache::lock('refresh_lock_' . $tokenHash, 10);
 
-        // حذف التوكن القديم (Token Rotation للأمان)
-        $tokenModel->delete();
+        try {
+            $lock->block(5);
 
-        // إصدار توكن جديد
-        $newToken = $user->createToken('access_token')->plainTextToken;
+            if ($cached = Cache::get($cacheKey)) {
+                return $this->success($cached['payload'])
+                    ->withCookie(cookie(
+                        'refresh_token',
+                        $cached['new_token'],
+                        60 * 24 * 7,
+                        '/',
+                        null,
+                        true,
+                        true,
+                        false,
+                        'lax'
+                    ));
+            }
 
-        return $this->success([
-            'user'         => $user,
-            'access_token' => $newToken,
-        ])->withCookie(cookie(
-            'refresh_token',
-            $newToken,
-            60 * 24 * 7, // 7 أيام
-            '/',
-            null,
-            true,  // secure
-            true,  // httpOnly
-            false,
-            'lax'
-        ));
+            $tokenModel = \Laravel\Sanctum\PersonalAccessToken::findToken($refreshToken);
+
+            if (!$tokenModel || !$tokenModel->tokenable) {
+                return $this->error(['Invalid or expired refresh token.'], 401);
+            }
+
+            $user = $tokenModel->tokenable;
+            $tokenModel->delete();
+
+            $newToken = $user->createToken('access_token')->plainTextToken;
+
+            $payload = [
+                'user'         => $user,
+                'access_token' => $newToken,
+            ];
+
+            Cache::put($cacheKey, [
+                'payload'   => $payload,
+                'new_token' => $newToken,
+            ], 10);
+
+            return $this->success($payload)
+                ->withCookie(cookie(
+                    'refresh_token',
+                    $newToken,
+                    60 * 24 * 7,
+                    '/',
+                    null,
+                    true,
+                    true,
+                    false,
+                    'lax'
+                ));
+        } catch (LockTimeoutException) {
+            if ($cached = Cache::get($cacheKey)) {
+                return $this->success($cached['payload'])
+                    ->withCookie(cookie(
+                        'refresh_token',
+                        $cached['new_token'],
+                        60 * 24 * 7,
+                        '/',
+                        null,
+                        true,
+                        true,
+                        false,
+                        'lax'
+                    ));
+            }
+
+            return $this->error(['Invalid or expired refresh token.'], 401);
+        } finally {
+            optional($lock)->release();
+        }
     }
 
     /**
