@@ -18,10 +18,10 @@ class ChatController extends Controller
 
     // Primary model + fallback models (tried in order on 429)
     private array $models = [
-        'llama-3.3-70b-versatile',   // Primary
-        'llama-3.1-8b-instant',      // Fallback 1 — faster, higher limits
-        'gemma2-9b-it',              // Fallback 2
-    ];
+    'openai/gpt-oss-120b',   // الأساسي — بديل llama-3.3-70b-versatile
+    'openai/gpt-oss-20b',    // احتياطي 1 — بديل llama-3.1-8b-instant، سريع
+    'qwen/qwen3.6-27b',      // احتياطي 2
+];
 
     public function __construct()
     {
