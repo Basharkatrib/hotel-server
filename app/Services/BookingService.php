@@ -8,6 +8,8 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Mail\BookingCancelled;
+use Illuminate\Support\Facades\Mail;
 
 class BookingService
 {
@@ -101,26 +103,26 @@ class BookingService
      */
     public function cancelBooking(Booking $booking): array
     {
-        return DB::transaction(function () use ($booking) {
+        $refundStatus = DB::transaction(function () use ($booking) {
             $booking->update(['status' => 'cancelled']);
-
+    
             $refundStatus = [
                 'success' => true,
                 'refund_processed' => false,
                 'refund_amount' => 0,
                 'message' => 'Booking cancelled successfully.'
             ];
-
+    
             if ($booking->payment && $booking->payment->status === 'succeeded') {
                 $daysUntilCheckIn = now()->diffInDays($booking->check_in_date, false);
-
+    
                 if ($daysUntilCheckIn >= 7) {
                     $refundAmount = $booking->payment->amount * 0.5;
-                    
+    
                     try {
                         $paymentService = app(PaymentService::class);
                         $result = $paymentService->refund($booking->payment, 0.5);
-                        
+    
                         $refundStatus['refund_processed'] = true;
                         $refundStatus['refund_amount'] = $refundAmount;
                         $refundStatus['message'] = "Booking cancelled. A 50% refund ($refundAmount) has been processed.";
@@ -133,8 +135,16 @@ class BookingService
                     $refundStatus['message'] = "Booking cancelled. No refund available (less than 7 days).";
                 }
             }
-
+    
             return $refundStatus;
         });
+    
+        try {
+            Mail::to($booking->guest_email)->send(new BookingCancelled($booking, $refundStatus));
+        } catch (\Exception $e) {
+            Log::error("Failed to send cancellation email for booking {$booking->id}: " . $e->getMessage());
+        }
+    
+        return $refundStatus;
     }
 }
